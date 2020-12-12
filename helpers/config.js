@@ -145,6 +145,43 @@ const config = {
 
         return true;
     },
+    getRobotSettings () {
+        let robots = this.getConfigData("robots");
+
+        let rets = [];
+        for (let robotname in robots) {
+            const robot = robots[robotname];
+            if (robot.active) {
+                let nr = {
+                    id: robotname
+                };
+                if (robot.port) { nr.port = robot.port; }
+                rets.push(nr);
+            }
+        }
+
+        return rets;
+    },
+    getLedSettings (robotname) {
+        let robots = this.getConfigData("robots");
+
+        if (!robots[robotname] || !robots[robotname].leds) {
+            console.error("getMotorSettings failed. No such robot in robots.json " + robotname);
+            return null;
+        }
+
+        return robots[robotname].leds;
+    },
+    getMotorSettings (robotname) {
+        let robots = this.getConfigData("robots");
+
+        if (!robots[robotname] || !robots[robotname].motors) {
+            console.error("getMotorSettings failed. No such robot in robots.json " + robotname);
+            return null;
+        }
+
+        return robots[robotname].motors;
+    },
     getConfigData (name, key) {
         if (!_priv.configs[name] || !_priv.configs[name].data) {
             console.error("UNABLE to get config data for " + name, _priv.configs);

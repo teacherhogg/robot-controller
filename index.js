@@ -22,7 +22,7 @@ app
   .get('/cool', (req, res) => res.send(cool()))
   .get('/times', (req, res) => res.send(showTimes()))
   .get('/modex', (req, res) => res.send(modex()))
-  .get('/testing', (req, res) => res.send(testing()))
+  .get('/testing', (req, res) => res.send(testing(req.query)))
   .listen(PORT, () => console.log(`Listening on ${PORT}`))
 
 app.locals.challenge = 'bigtest';
@@ -42,8 +42,9 @@ modex = () => {
 
 }
 
-testing = () => {
-  arduino.testing();
+testing = (query) => {
+  console.log("HERE is the query eh?", query);
+  arduino.testing(query);
 }
 
 start = () => {

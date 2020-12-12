@@ -1,144 +1,209 @@
 //const SerialPort = require("chrome-apps-serialport").SerialPort;
 //const SerialPort = require('serialport').SerialPort
 //const Firmata = require("firmata-io")(SerialPort);
+const { response } = require('express');
 const five = require('johnny-five');
 
 var _priv = {
-    board: null,
+    boards: null,
     config: null,
-    leds: {}
+    leds: null,
+    motors: null
 }
 
 const _helpers = {
-    _init2: async function () {
-        //        let ports = await SerialPort.list();
-        //        console.log("HERE da ports ", ports);
-        /*
-        SerialPort.list().then(ports => {
+    _init: function () {
+        let rsettings = _priv.config.getRobotSettings();
+        console.log("Calling init of boards", rsettings);
+        _priv.boards = new five.Boards(rsettings);
 
-            console.log("HERE da ports ", ports);
+        _priv.boards.on("ready", function (info) {
 
+            console.log("arduino boards are now ready", info);
+        });
+    },
+    _setupLeds: function (robotname) {
+        if (!_priv.leds) { _priv.leds = {}; }
+        if (!_priv.leds[robotname]) {
+            const linfo = _priv.config.getLedSettings(robotname);
 
-            const device = ports.find(port => {
-                console.log("DA PORT IS ", port);
-                return port.manufacturer && port.manufacturer.startsWith("Arduino");
+            let lightL = new five.Led({
+                board: _priv.boards.byId(robotname),
+                pin: linfo.left
+            });
+            let lightR = new five.Led({
+                board: _priv.boards.byId(robotname),
+                pin: linfo.right
             });
 
-            console.log("HERE is the device", device);
-            const board = new five.Board({
-                io: new Firmata(device.path)
-            })
+            if (!lightL || !lightR) {
+                console.error("ERROR getting LED setup!!! " + robotname);
+                return;
+            }
 
-            _helpers._init(board);
-        })
-        */
-    },
-    _getMotorPins: function (name, motorname) {
-        const invertPWM = false;
-
-        // cdir
-        /*
-                pins: {
-                    pwm: 9,
-                        dir: 8,
-                            cdir: 7
-                },
-        */
-        let motors = {
-            left: {
-                pins: {
-                    pwm: 10,
-                    dir: 8,
-                    cdir: 7
-                },
-                invertPWM
-            },
-            right: {
-                pins: {
-                    pwm: 3,
-                    dir: 4,
-                    cdir: 5
-                },
-                invertPWM
+            _priv.leds[robotname] = {
+                left: lightL,
+                right: lightR
             }
         }
+    },
+    _setupMotors: function (robotname) {
+        if (!_priv.motors) { _priv.motors = {}; }
+        if (!_priv.motors[robotname]) {
+            const minfo = _priv.config.getMotorSettings(robotname);
 
-        let ret = null;
-        if (motorname == "both") {
-            ret = [];
-            for (let m in motors) {
-                ret.push(motors[m]);
+            let motorL = new five.Motor(minfo.left)
+            let motorR = new five.Motor(minfo.right)
+
+            if (!motorL || !motorR) {
+                console.error("ERROR getting motor setup!!! " + robotname);
+                return;
+            }
+
+            _priv.boards[robotname].repl.inject({
+                motorL, motorR
+            });
+
+            _priv.motors[robotname] = {
+                left: motorL,
+                right: motorR
             }
         }
-
-        console.log("GOT motor setup for " + motorname, ret);
-        return ret;
     },
-    _testing: function () {
-        let minfo = _helpers._getMotorPins('Robot A', 'both');
-        let motors = new five.Motors(minfo)
+    _runMotors: function (robotname, cmd, inspeed, time) {
+        console.log("Running Motors on " + robotname + " " + cmd + " for " + time);
+        _helpers._setupMotors(robotname);
+        const motors = _priv.motors[robotname];
 
-        if (!motors) {
-            console.error("ERROR getting motor setup!!!");
+        return new Promise((resolve, reject) => {
+            if (!motors || !motors.left || !motors.right) { reject(new Error('Missing Robot Motors')); }
+            else {
+                const motorL = motors.left;
+                const motorR = motors.right;
+                let corr = 0;
+                let speed = inspeed;
+                switch (cmd) {
+                    case 'FWD':
+                        corr = 0;
+                        speed = Math.max(Math.min(inspeed, 255 - corr), corr);
+                        motorL.forward(speed + corr);
+                        motorR.forward(speed - corr);
+                        break;
+                    case 'BACK':
+                        corr = 0;
+                        speed = Math.max(Math.min(inspeed, 255 - corr), corr);
+                        motorL.reverse(speed + corr);
+                        motorR.reverse(speed - corr);
+                        break;
+                    case 'FWDL':
+                        corr = 0;
+                        speed = Math.max(Math.min(inspeed, 255 - corr), corr);
+                        motorL.forward(speed + corr);
+                        break;
+                    case 'BACKL':
+                        corr = 0;
+                        speed = Math.max(Math.min(inspeed, 255 - corr), corr);
+                        motorL.reverse(speed + corr);
+                        break;
+                    case 'FWDR':
+                        corr = 0;
+                        speed = Math.max(Math.min(inspeed, 255 - corr), corr);
+                        motorR.forward(speed - corr);
+                        break;
+                    case 'BACKR':
+                        corr = 0;
+                        speed = Math.max(Math.min(inspeed, 255 - corr), corr);
+                        motorR.reverse(speed - corr);
+                        break;
+                    case 'TURNL':
+                        corr = 0;
+                        speed = Math.max(Math.min(inspeed, 255 - corr), corr);
+                        motorL.reverse(speed + corr);
+                        motorR.forward(speed - corr);
+                        break;
+                    case 'TURNR':
+                        corr = 0;
+                        speed = Math.max(Math.min(inspeed, 255 - corr), corr);
+                        motorL.forward(speed + corr);
+                        motorR.reverse(speed - corr);
+                        break;
+                    default:
+                        console.log("NO RECOGNIZED COMMAND! " + cmd);
+                        reject(new Error("CMDERROR " + cmd));
+                        return;
+                }
+
+                console.log("RUNNING CMD " + cmd + " at speed " + speed + " for time " + time);
+                _priv.boards[robotname].wait(time, () => {
+                    motorL.stop();
+                    motorR.stop();
+                    resolve('DONE');
+                });
+            }
+        });
+    },
+    _testing: async function (query) {
+        const robotname = 'A';
+        _helpers._setupMotors(robotname);
+
+        console.log("GO TESTING... ", query);
+        let speed = 255;
+        let time = 3000;
+        let bTurns = false;
+
+        if (query && query.speed) { speed = query.speed; }
+        if (query && query.time) { time = query.time; }
+        if (query && query.turn) { bTurns = true; }
+
+        if (bTurns) {
+            await _helpers._runMotors(robotname, 'TURNR', speed, time);
+            await _helpers._runMotors(robotname, 'TURNL', speed, time);
+        } else {
+            await _helpers._runMotors(robotname, 'BACK', speed, time);
+            await _helpers._runMotors(robotname, 'FWD', speed, time);
+        }
+    },
+    _doLED: function (robotname, cmd, tlen) {
+        _helpers._setupLeds(robotname);
+        let leds = _priv.leds[robotname];
+        if (!leds) {
+            console.error("ERROR Leds not setup", robotname);
             return;
         }
-
-        _priv.board.repl.inject({
-            motors
-        });
-
-        console.log("GO FORWARD");
-        // motors[1] is RIGHT
-        motors.forward(255);
-        _priv.board.wait(5000, () => {
-            console.log("GO BACK...");
-            motors.reverse(255);
-            _priv.board.wait(5000, () => {
-                console.log("STOIPPING NOW...");
-                motors.stop();
-            })
-        });
-
-    },
-    _getRobotInfo: function () {
-        let boardinfo = _priv.config.getConfigData("robots")
-    },
-    _init: function (board) {
-        console.log("Calling init of board", board);
-        if (board) {
-            _priv.board = board;
-        } else {
-            _priv.board = new five.Board();
-            //                port: 'COM3',
-            //                repl: false
-            //            });
-        }
-
-        _priv.board.on("ready", function () {
-
-            console.log("arduino board is now ready");
-            _helpers._doLED('LEDBLINK', 7, 100);
-        });
-    },
-    _doLED: function (cmdtype, pin, tlen) {
-        let led = _priv.leds[pin];
-        if (!led) {
-            led = new five.Led(pin);
-            _priv.leds[pin] = led;
-        } else {
-            led.stop();
-        }
         let bRet = true;
-        switch (cmdtype) {
+        switch (cmd) {
             case 'LEDBLINK':
             case 'BLINK':
-                led.blink(tlen);
+                leds.left.blink(tlen);
+                leds.right.blink(tlen);
                 break;
             case 'LEDOFF':
-                led.off();
+                leds.left.off();
+                leds.right.off();
                 break;
             case 'LEDON':
-                led.on();
+                leds.left.on();
+                leds.right.on();
+                break;
+            case 'LEDBLINKL':
+            case 'BLINKL':
+                leds.left.blink(tlen);
+                break;
+            case 'LEDOFFL':
+                leds.left.off();
+                break;
+            case 'LEDONL':
+                leds.left.on();
+                break;
+            case 'LEDBLINKR':
+            case 'BLINKR':
+                leds.right.blink(tlen);
+                break;
+            case 'LEDOFFR':
+                leds.right.off();
+                break;
+            case 'LEDONR':
+                leds.right.on();
                 break;
             default:
                 console.error("Unreocgnized command!", cmdtype);
@@ -147,42 +212,48 @@ const _helpers = {
         }
         return bRet;
     },
-    _executeCommand: function (cmd) {
+    _executeCommand: async function (robotname, cmd) {
         if (!cmd) {
             console.error("ERROR - cmd not set");
             return;
         }
         cmd.trim();
         let cmda = cmd.split("-");
-
-        let pin, led, tlen;
+        let tlen;
 
         console.log("RUNNING COMMAND:" + cmd + ":");
         let bRet = true;
 
         switch (cmda[0]) {
             case 'FWD':
-
-            case 'LEDON':
-            case 'LEDOFF':
-                pin = parseInt(cmda[1], 10);
-                console.log("HERE is a " + cmda[0] + " command with pin " + pin);
-                bRet = _helpers._doLED(cmda[0], pin);
-                break;
-            case 'BLINK':
-            case 'LEDBLINK':
-                // expects of form BLINK-PIN-TIME
-                // where: 
-                //  PIN is the pin number 
-                //  TIME is the blink time in ms
-                if (cmda.length !== 3) {
-                    console.error("ERROR - invalid BLINK: " + cmd);
-                    return false;
-                }
-                pin = parseInt(cmda[1], 10);
+            case 'BACK':
+            case 'TURNL':
+            case 'TURNR':
+                // Expects of the form CMD-XXX-TIME
+                // where XXX is SPEED 
+                // TIME is the time in ms
+                const speed = parseInt(cmda[1], 10);
                 tlen = parseInt(cmda[2], 10);
-                console.log("HERE is a blink command with pin " + pin + " and time " + tlen)
-                bRet = _helpers._doLED(cmda[0], pin, tlen);
+                console.log("STARTING motor command " + cmda[0], speed, time);
+                await _helpers._runMotors(robotname, cmda[0], speed, tlen);
+                break;
+            case 'LEDON':
+            case 'LEDONL':
+            case 'LEDONR':
+            case 'LEDOFF':
+            case 'LEDOFFL':
+            case 'LEDOFFR':
+            case 'BLINK':
+            case 'BLINKL':
+            case 'BLINKR':
+            case 'LEDBLINK':
+            case 'LEDBLINKL':
+            case 'LEDBLINKR':
+                // expects of form CMD-TIME
+                if (cmda.length > 1) {
+                    tlen = parseInt(cmda[1], 10);
+                }
+                bRet = _helpers._doLED(robotname, cmda[0], tlen);
                 break
             default:
                 console.log("Unsupported cmd " + cmda[0]);
@@ -199,25 +270,29 @@ const arduino = {
         _priv.config = config;
         _helpers._init();
     },
-    testing: function () {
-        _helpers._testing();
+    testing: function (query) {
+        _helpers._testing(query);
     },
-    executeCommands: function (user, commands) {
-        if (!_priv.board) {
-            console.log("BOARD not initialized!");
+    executeCommands: async function (user, commands) {
+        if (!_priv.boards) {
+            console.log("BOARDS not initialized!");
             return;
         }
         console.log("executeCommands", commands, user);
+        /*
 
         if (!commands) {
             return;
         }
 
         const cmda = commands.split(",");
+        const robotname = 'A';
 
         for (let cmd of cmda) {
-            _helpers._executeCommand(cmd);
+            _helpers._executeCommand(robotname, cmd);
         }
+
+        */
     }
 }
 
