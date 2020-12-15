@@ -201,9 +201,15 @@ const config = {
         return data[key];
     },
     addUserToChallenge (user) {
-        if (!_priv.challenge || !_priv.challenge.mode == "open") {
-            console.error("FATAL ERROR - something wrong in setup for adding user to challenge ", _priv.challenge);
-            return;
+
+        const testmode = config.getConfigData("settings", "testmode");
+
+        // NOTE - testmode is dangerous. Checks are ignored!
+        if (!testmode) {
+            if (!_priv.challenge || !_priv.challenge.mode == "open") {
+                console.error("FATAL ERROR - something wrong in setup for adding user to challenge ", _priv.challenge);
+                return;
+            }
         }
 
         _priv.challenge.users[user.id] = user;

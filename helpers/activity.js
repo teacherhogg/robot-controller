@@ -45,6 +45,10 @@ const _helpers = {
                         user = Object.assign(user, ruser);
                         bUserFound = true;
                     }
+                } else {
+                    // ignore usercode if beslack is true
+                    user = Object.assign(user, ruser);
+                    bUserFound = true;
                 }
             }
         }
@@ -118,13 +122,17 @@ const activity = {
     processCommand: function (commands) {
         // commands is an array of objects with properties:
         //          id, timestamp, commands, challenge
-        console.log("PROCESSING COMMAND", commands);
+        //        console.log("PROCESSING COMMAND", commands);
 
         let challenge = _priv.config.getChallenge();
-        if (!challenge || challenge.mode != 'running') {
-            console.log("CHALLENGE MODE is " + challenge.mode, challenge);
-            console.log("CANNOT EXECUTE NEW COMMANDS. Not running? ", commands);
-            return;
+        const testmode = _priv.config.getConfigData("settings", "testmode");
+
+        if (!testmode) {
+            if (!challenge || challenge.mode != 'running') {
+                console.log("CHALLENGE MODE is " + challenge.mode, challenge);
+                console.log("CANNOT EXECUTE NEW COMMANDS. Not running? ", commands);
+                return;
+            }
         }
 
         for (let command of commands) {

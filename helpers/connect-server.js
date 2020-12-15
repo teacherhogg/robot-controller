@@ -20,7 +20,7 @@ const _helpers = {
         });
 
         _priv.socket.on('newCommands', function (data) {
-            console.log("HERE is the NEWCOMMANDS from server", data);
+            //            console.log("HERE is the NEWCOMMANDS from server", data);
 
             if (data && data.length > 0) {
                 if (cbmap["command"]) { cbmap["command"](data); }

@@ -43,7 +43,6 @@ modex = () => {
 }
 
 testing = (query) => {
-  console.log("HERE is the query eh?", query);
   arduino.testing(query);
 }
 
@@ -73,4 +72,6 @@ start = () => {
 }
 
 start();
+// Start up in registration for challenge
+modex();
 
