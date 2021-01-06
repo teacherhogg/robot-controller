@@ -2,12 +2,13 @@ const arduino = require("./arduino");
 
 var _priv = {
     config: null,
-    arduino: null
+    arduino: null,
+    queue: null
 }
 
 const _helpers = {
     _processCommand: function (challenge, command) {
-        // command is an object with properties:
+        // commands is an object with properties:
         //     id, challenge, commands
         if (!challenge || !challenge.users ||
             !challenge.users[command.id] ||
@@ -53,7 +54,7 @@ const _helpers = {
             }
         }
         if (!bUserFound) {
-            console.error("CANNOT add user as not a valid participant!", user, users);
+            console.error("INVALID PARTICIPANT username:" + user.username + " usercode:" + user.usercode);
             return false;
         }
 
@@ -80,7 +81,7 @@ const _helpers = {
             console.error("USER is NOT a part of an active robot's team", user, robots);
             return false;
         }
-        console.log("HERE is the updated user ", user, userrobot, userteam);
+        console.log("USER REGISTERED:" + user.username + " (" + user.firstname + ") robot:" + userrobot + " team:" + userteam);
 
 
         // STEP 4: Is this team the ONLY team for specified robot
@@ -88,8 +89,8 @@ const _helpers = {
         const multiteams = _priv.config.getConfigData("settings", "multiteams");
         if (!multiteams) {
             const currteams = challenge.robots[userrobot];
-            if (currteams && currteams.includes(userteam)) {
-                console.error("ERROR - PROBLEM encountered where a user from ANOTHER team already registered on this robot for this challenge!", challenge);
+            if (currteams && currteams.length > 0 && !currteams.includes(userteam)) {
+                console.error("ERROR - PROBLEM encountered where a user from ANOTHER team already registered on this robot for this challenge! " + userteam, challenge);
                 return false;
             }
         }
@@ -118,6 +119,10 @@ const activity = {
     init: function (config, arduino) {
         _priv.config = config;
         _priv.arduino = arduino;
+        _priv.queue = [];
+    },
+    resetQueue: function () {
+        _priv.queue = [];
     },
     processCommand: function (commands) {
         // commands is an array of objects with properties:
@@ -135,6 +140,12 @@ const activity = {
             }
         }
 
+        //        console.log("PROCESS COMMAND command is ", commands);
+        // commands is an array of objects with props: id, challenge, timestamp, commands
+        if (commands && commands.length > 1) {
+            console.log("NOTO BIEN: We have multiple commands at once!!! " + commands.length, commands);
+        }
+
         for (let command of commands) {
             _helpers._processCommand(challenge, command);
         }
@@ -142,7 +153,7 @@ const activity = {
     processUser: function (users) {
         // users is an array of objects with properties:
         //     id, challenge, username, usercode
-        console.log("PROCESSING USERS", users);
+        //        console.log("PROCESSING USERS", users);
 
         let challenge = _priv.config.getChallenge();
         if (!challenge || challenge.mode != 'open') {

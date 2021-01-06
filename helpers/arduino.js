@@ -8,6 +8,7 @@ var _priv = {
     boards: null,
     config: null,
     leds: null,
+    blocks: {},
     motors: null
 }
 
@@ -52,7 +53,7 @@ const _helpers = {
         if (!_priv.motors[robotname]) {
             const minfo = _priv.config.getMotorSettings(robotname);
 
-            console.log("HERE are the motor settings for robot " + robotname, minfo);
+            //            console.log("HERE are the motor settings for robot " + robotname, minfo);
             const board = _priv.boards.byId(robotname);
             let lsettings = minfo.left;
             lsettings.board = board;
@@ -131,8 +132,8 @@ const _helpers = {
                     case 'TURNFWDL':
                         corr = 50;
                         speed = Math.max(Math.min(inspeed, 255 - corr), corr);
-                        motorL.forward(speed + corr);
-                        motorR.forward(speed - corr);
+                        motorR.forward(speed + corr);
+                        motorL.forward(speed - corr);
                         break;
                     case 'TURNR':
                         corr = 0;
@@ -143,16 +144,16 @@ const _helpers = {
                     case 'TURNFWDR':
                         corr = 50;
                         speed = Math.max(Math.min(inspeed, 255 - corr), corr);
-                        motorL.forward(speed - corr);
-                        motorR.forward(speed + corr);
+                        motorR.forward(speed - corr);
+                        motorL.forward(speed + corr);
                         break;
                     default:
                         console.log("NO RECOGNIZED COMMAND! " + cmd);
-                        reject(new Error("CMDERROR " + cmd));
+                        //                        reject(new Error("CMDERROR " + cmd));
                         return;
                 }
 
-                console.log("RUNNING CMD " + cmd + " at speed " + speed + " for time " + time);
+                //                console.log("RUNNING CMD " + cmd + " at speed " + speed + " for time " + time);
                 const board = _priv.boards.byId(robotname);
                 board.wait(time, () => {
                     motorL.stop();
@@ -164,36 +165,33 @@ const _helpers = {
     },
     _testing: async function (query) {
         let speed = 255;
-        let time = 2000;
+        let time = 4000;
         let bTurns = false;
 
         if (query && query.speed) { speed = query.speed; }
         if (query && query.time) { time = query.time; }
         if (query && query.turn) { bTurns = true; }
 
-        let robotname = 'A';
+        let robotname = 'D';
         if (bTurns) {
             await _helpers._runMotors(robotname, 'TURNR', speed, time);
             await _helpers._runMotors(robotname, 'TURNL', speed, time);
         } else {
-            console.log("FIRST - move robot A back and forth for " + time + " ms");
-            await _helpers._doLED(robotname, 'BLINKL', 500);
-            await _helpers._runMotors(robotname, 'FWD', speed, time);
-            await _helpers._doLED(robotname, 'LEDOFFL');
-            await _helpers._doLED(robotname, 'BLINKR', 500);
-            await _helpers._runMotors(robotname, 'BACK', speed, time);
-            await _helpers._doLED(robotname, 'LEDOFFR');
-            await _helpers._doLED(robotname, 'LEDOFFL');
-            robotname = 'B';
-            console.log("SECOND - move robot B back and forth for " + time + " ms");
-            await _helpers._doLED(robotname, 'BLINKL', 500);
-            await _helpers._runMotors(robotname, 'FWD', speed, time);
-            await _helpers._doLED(robotname, 'LEDOFFL');
-            await _helpers._doLED(robotname, 'BLINKR', 500);
-            await _helpers._runMotors(robotname, 'BACK', speed, time);
-            await _helpers._doLED(robotname, 'LEDOFFR');
-            await _helpers._doLED(robotname, 'LEDONL');
-            await _helpers._doLED(robotname, 'LEDONR');
+            console.log("FIRST - move robot " + robotname + " back and forth for " + time + " ms");
+            //            await _helpers._doLED(robotname, 'BLINKL', 500);
+            //            await _helpers._runMotors(robotname, 'TURNFWDL', 250, 4000);
+            await _helpers._runMotors('Black', 'FWD', 250, 2000);
+            await _helpers._runMotors('Pink', 'FWD', 250, 2000);
+            await _helpers._runMotors('White', 'FWD', 250, 2000);
+            //            await _helpers._runMotors(robotname, 'TURNR', 150, 4000);
+            /*            await _helpers._doLED(robotname, 'LEDOFFL');
+                        await _helpers._doLED(robotname, 'BLINKR', 500);
+                        await _helpers._runMotors(robotname, 'BACK', speed, time);
+                        await _helpers._doLED(robotname, 'LEDOFFR');
+                        await _helpers._doLED(robotname, 'LEDOFFL');
+                        await _helpers._runMotors(robotname, 'TURNR', 200, 3000);
+                        await _helpers._runMotors(robotname, 'TURNL', 200, 3000);
+            */
         }
     },
     _doLED: async function (robotname, cmd, tlen) {
@@ -257,9 +255,10 @@ const _helpers = {
         }
         return bRet;
     },
-    _executeCommand: async function (robotname, cmd) {
+    _executeCommand: async function (robotname, cmd, cb) {
         if (!cmd) {
             console.error("ERROR - cmd not set");
+            if (cb) { cb("ERROR"); }
             return;
         }
         cmd.trim();
@@ -308,6 +307,7 @@ const _helpers = {
                 break;
         }
 
+        if (cb) { cb(null, robotname); }
         return bRet;
     }
 }
@@ -331,12 +331,33 @@ const arduino = {
             return;
         }
 
+        const asyncmode = _priv.config.getConfigData("settings", "asyncmode");
+
         const cmda = commands.split(",");
-        let msg = user.userrobot + " team: " + user.userteam + " user: " + user.firstname;
+
+        let msg = user.userrobot + " team:" + user.userteam + " user:" + user.firstname + " commands:" + commands;
         console.log(msg);
-        console.log("COMMANDS: " + commands);
+
+
         for (let cmd of cmda) {
-            _helpers._executeCommand(user.userrobot, cmd);
+            if (!asyncmode || asyncmode == "sync") {
+                await _helpers._executeCommand(user.userrobot, cmd);
+            } else {
+                if (_priv.blocks[user.userrobot]) {
+                    console.log("BLOCKED - command currently running on " + user.userrobot);
+                } else {
+                    // Only ONE command set per robot at a time.
+                    _priv.blocks[user.userrobot] = true;
+                    _helpers._executeCommand(user.userrobot, cmd, function (err, rname) {
+                        _priv.blocks[user.userrobot] = false;
+                        if (err) {
+                            console.error("ERROR returned from _executeCommand");
+                        } else {
+                            console.log("COMPLETE for " + user.userrobot);
+                        }
+                    });
+                }
+            }
         }
 
     }

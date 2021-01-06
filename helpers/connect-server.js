@@ -28,7 +28,7 @@ const _helpers = {
 
         });
         _priv.socket.on('newUsers', function (data) {
-            console.log("HERE is the NEWUSERS from server", data);
+            //            console.log("HERE is the NEWUSERS from server", data);
             if (data && data.length > 0) {
                 if (cbmap["user"]) { cbmap["user"](data); }
             }

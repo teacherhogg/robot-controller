@@ -220,7 +220,7 @@ const config = {
             _priv.challenge.robots[user.userrobot].push(user.userteam);
         }
 
-        console.log("NEW USER added to challenge", _priv.challenge);
+        //        console.log("NEW USER added to challenge", _priv.challenge);
     },
     getChallenge () {
         return _priv.challenge;
