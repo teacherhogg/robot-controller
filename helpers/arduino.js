@@ -9,6 +9,7 @@ var _priv = {
     config: null,
     leds: null,
     blocks: {},
+    lastuser: {},
     motors: null
 }
 
@@ -16,12 +17,18 @@ const _helpers = {
     _init: function () {
         let rsettings = _priv.config.getRobotSettings();
         console.log("Calling init of boards", rsettings);
-        _priv.boards = new five.Boards(rsettings);
+        try {
+            _priv.boards = new five.Boards(rsettings);
 
-        _priv.boards.on("ready", function (info) {
+            _priv.boards.on("ready", function (info) {
 
-            console.log("arduino boards are now ready");
-        });
+                console.log("arduino boards are now ready");
+                _priv.lastuser = {};
+            });
+        } catch (err) {
+            console.error("ERROR initializing robots!!!");
+            console.error(err);
+        }
     },
     _setupLeds: function (robotname) {
         if (!_priv.leds) { _priv.leds = {}; }
@@ -177,7 +184,7 @@ const _helpers = {
             await _helpers._runMotors(robotname, 'TURNR', speed, time);
             await _helpers._runMotors(robotname, 'TURNL', speed, time);
         } else {
-            console.log("FIRST - move robot " + robotname + " back and forth for " + time + " ms");
+            console.log("Running test sequence!");
             //            await _helpers._doLED(robotname, 'BLINKL', 500);
             //            await _helpers._runMotors(robotname, 'TURNFWDL', 250, 4000);
             await _helpers._runMotors('Black', 'FWD', 250, 2000);
@@ -321,6 +328,7 @@ const arduino = {
         _helpers._testing(query);
     },
     executeCommands: async function (user, commands) {
+        // commands is a comma-separated list of commands.
         if (!_priv.boards) {
             console.log("BOARDS not initialized!");
             return;
@@ -331,7 +339,16 @@ const arduino = {
             return;
         }
 
-        const asyncmode = _priv.config.getConfigData("settings", "asyncmode");
+        const mode = _priv.config.getConfigData("settings", "mode");
+
+        if (mode == "team") {
+            if (_priv.lastuser[user.userrobot] == user.username) {
+                console.log("BLOCKED " + user.firstname + " on " + user.userrobot);
+                return;
+            } else {
+                _priv.lastuser[user.userrobot] = user.username;
+            }
+        }
 
         const cmda = commands.split(",");
 
@@ -340,7 +357,7 @@ const arduino = {
 
 
         for (let cmd of cmda) {
-            if (!asyncmode || asyncmode == "sync") {
+            if (!mode || mode == "sync" || mode == "team") {
                 await _helpers._executeCommand(user.userrobot, cmd);
             } else {
                 if (_priv.blocks[user.userrobot]) {

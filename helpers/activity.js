@@ -13,7 +13,7 @@ const _helpers = {
         if (!challenge || !challenge.users ||
             !challenge.users[command.id] ||
             challenge.name != command.challenge) {
-            console.error("ERROR processing command! Something wrong", challenge, command);
+            console.error("challenge incorrect: " + command.challenge + " (" + command.id + ")");
             return false;
         }
 
