@@ -1,7 +1,9 @@
 //const SerialPort = require("chrome-apps-serialport").SerialPort;
 //const SerialPort = require('serialport').SerialPort
 //const Firmata = require("firmata-io")(SerialPort);
-const { response } = require('express');
+const {
+    response
+} = require('express');
 const five = require('johnny-five');
 
 var _priv = {
@@ -20,18 +22,24 @@ const _helpers = {
         try {
             _priv.boards = new five.Boards(rsettings);
 
-            _priv.boards.on("ready", function (info) {
+            _priv.boards
+                .on("ready", function (info) {
 
-                console.log("arduino boards are now ready");
-                _priv.lastuser = {};
-            });
+                    console.log("arduino boards are now ready");
+                    _priv.lastuser = {};
+                })
+                .on("error", function (err) {
+                    console.error("ERROR from connecting to board", err);
+                });
         } catch (err) {
             console.error("ERROR initializing robots!!!");
             console.error(err);
         }
     },
     _setupLeds: function (robotname) {
-        if (!_priv.leds) { _priv.leds = {}; }
+        if (!_priv.leds) {
+            _priv.leds = {};
+        }
         if (!_priv.leds[robotname]) {
             const linfo = _priv.config.getLedSettings(robotname);
 
@@ -56,7 +64,9 @@ const _helpers = {
         }
     },
     _setupMotors: function (robotname) {
-        if (!_priv.motors) { _priv.motors = {}; }
+        if (!_priv.motors) {
+            _priv.motors = {};
+        }
         if (!_priv.motors[robotname]) {
             const minfo = _priv.config.getMotorSettings(robotname);
 
@@ -86,13 +96,15 @@ const _helpers = {
         }
     },
     _runMotors: function (robotname, cmd, inspeed, time) {
-        //        console.log("Running Motors on " + robotname + " " + cmd + " for " + time);
+        console.log("Running Motors on " + robotname + " " + cmd + " for " + time);
         _helpers._setupMotors(robotname);
         const motors = _priv.motors[robotname];
 
         return new Promise((resolve, reject) => {
-            if (!motors || !motors.left || !motors.right) { reject(new Error('Missing Robot Motors')); }
-            else {
+            if (!motors || !motors.left || !motors.right) {
+                console.error("ERROR running motors!");
+                reject(new Error('Missing Robot Motors'));
+            } else {
                 const motorL = motors.left;
                 const motorR = motors.right;
                 let corr = 0;
@@ -160,26 +172,37 @@ const _helpers = {
                         return;
                 }
 
-                //                console.log("RUNNING CMD " + cmd + " at speed " + speed + " for time " + time);
+                console.log("RUNNING CMD " + cmd + " at speed " + speed + " for time " + time);
                 const board = _priv.boards.byId(robotname);
-                board.wait(time, () => {
-                    motorL.stop();
-                    motorR.stop();
-                    resolve('DONE');
-                });
+                if (!board) {
+                    reject(new Error('board.byId ' + robotname + ' returning NULL!'));
+                } else {
+                    board.wait(time, () => {
+                        motorL.stop();
+                        motorR.stop();
+                        resolve('DONE');
+                    });
+                }
             }
         });
     },
-    _testing: async function (query) {
+    _testing: async function (query, robotname) {
         let speed = 255;
         let time = 4000;
         let bTurns = false;
 
-        if (query && query.speed) { speed = query.speed; }
-        if (query && query.time) { time = query.time; }
-        if (query && query.turn) { bTurns = true; }
+        if (query && query.speed) {
+            speed = query.speed;
+        }
+        if (query && query.time) {
+            time = query.time;
+        }
+        if (query && query.turn) {
+            bTurns = true;
+        }
 
-        let robotname = 'D';
+        bTurns = true;
+
         if (bTurns) {
             await _helpers._runMotors(robotname, 'TURNR', speed, time);
             await _helpers._runMotors(robotname, 'TURNL', speed, time);
@@ -265,7 +288,9 @@ const _helpers = {
     _executeCommand: async function (robotname, cmd, cb) {
         if (!cmd) {
             console.error("ERROR - cmd not set");
-            if (cb) { cb("ERROR"); }
+            if (cb) {
+                cb("ERROR");
+            }
             return;
         }
         cmd.trim();
@@ -314,7 +339,9 @@ const _helpers = {
                 break;
         }
 
-        if (cb) { cb(null, robotname); }
+        if (cb) {
+            cb(null, robotname);
+        }
         return bRet;
     }
 }
@@ -324,8 +351,8 @@ const arduino = {
         _priv.config = config;
         _helpers._init();
     },
-    testing: function (query) {
-        _helpers._testing(query);
+    testing: function (query, robotname) {
+        _helpers._testing(query, robotname);
     },
     executeCommands: async function (user, commands) {
         // commands is a comma-separated list of commands.

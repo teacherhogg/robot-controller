@@ -43,7 +43,7 @@ modex = () => {
 }
 
 testing = (query) => {
-  arduino.testing(query);
+  arduino.testing(query, 'Pink');
 }
 
 start = () => {
@@ -74,4 +74,3 @@ start = () => {
 start();
 // Start up in registration for challenge
 modex();
-
