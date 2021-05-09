@@ -96,7 +96,7 @@ const _helpers = {
         }
     },
     _runMotors: function (robotname, cmd, inspeed, time) {
-        console.log("Running Motors on " + robotname + " " + cmd + " for " + time);
+        //        console.log("Running Motors on " + robotname + " " + cmd + " for " + time);
         _helpers._setupMotors(robotname);
         const motors = _priv.motors[robotname];
 
@@ -109,6 +109,7 @@ const _helpers = {
                 const motorR = motors.right;
                 let corr = 0;
                 let speed = inspeed;
+                let speedl, speedr, ndiff;
                 switch (cmd) {
                     case 'FWD':
                         corr = 0;
@@ -148,23 +149,56 @@ const _helpers = {
                         motorL.reverse(speed + corr);
                         motorR.forward(speed - corr);
                         break;
-                    case 'TURNFWDL':
-                        corr = 50;
-                        speed = Math.max(Math.min(inspeed, 255 - corr), corr);
-                        motorR.forward(speed + corr);
-                        motorL.forward(speed - corr);
-                        break;
                     case 'TURNR':
                         corr = 0;
                         speed = Math.max(Math.min(inspeed, 255 - corr), corr);
                         motorL.forward(speed + corr);
                         motorR.reverse(speed - corr);
                         break;
-                    case 'TURNFWDR':
-                        corr = 50;
+                    case 'TURNFWDL':
+                        corr = 100;
                         speed = Math.max(Math.min(inspeed, 255 - corr), corr);
-                        motorR.forward(speed - corr);
-                        motorL.forward(speed + corr);
+                        speedr = speed + corr;
+                        ndiff = speedr - 255;
+                        if (ndiff > 0) {
+                            corr += ndiff;
+                        }
+                        speedl = speed - corr;
+                        speedl = Math.min(255, speedl);
+                        speedr = Math.min(255, speedr);
+                        //                      console.log("motorR " + speedr + " motorL " + speedl)
+                        if (speedl < 0) {
+                            motorL.reverse(Math.abs(speedl));
+                        } else {
+                            motorL.forward(speedl);
+                        }
+                        if (speedr < 0) {
+                            motorR.reverse(Math.abs(speedr));
+                        } else {
+                            motorR.forward(speedr);
+                        }
+                        break;
+                    case 'TURNFWDR':
+                        corr = 100;
+                        speedl = speed + corr;
+                        ndiff = speedl - 255;
+                        if (ndiff > 0) {
+                            corr += ndiff;
+                        }
+                        speedr = speed - corr;
+                        speedl = Math.min(255, speedl);
+                        speedr = Math.min(255, speedr);
+                        //                        console.log("motorR " + speedr + " motorL " + speedl)
+                        if (speedl < 0) {
+                            motorL.reverse(Math.abs(speedl));
+                        } else {
+                            motorL.forward(speedl);
+                        }
+                        if (speedr < 0) {
+                            motorR.reverse(Math.abs(speedr));
+                        } else {
+                            motorR.forward(speedr);
+                        }
                         break;
                     default:
                         console.log("NO RECOGNIZED COMMAND! " + cmd);
@@ -172,7 +206,7 @@ const _helpers = {
                         return;
                 }
 
-                console.log("RUNNING CMD " + cmd + " at speed " + speed + " for time " + time);
+                //              console.log("RUNNING CMD " + cmd + " at speed " + speed + " for time " + time);
                 const board = _priv.boards.byId(robotname);
                 if (!board) {
                     reject(new Error('board.byId ' + robotname + ' returning NULL!'));
@@ -201,8 +235,6 @@ const _helpers = {
             bTurns = true;
         }
 
-        bTurns = true;
-
         if (bTurns) {
             await _helpers._runMotors(robotname, 'TURNR', speed, time);
             await _helpers._runMotors(robotname, 'TURNL', speed, time);
@@ -210,9 +242,12 @@ const _helpers = {
             console.log("Running test sequence!");
             //            await _helpers._doLED(robotname, 'BLINKL', 500);
             //            await _helpers._runMotors(robotname, 'TURNFWDL', 250, 4000);
-            await _helpers._runMotors('Black', 'FWD', 250, 2000);
-            await _helpers._runMotors('Pink', 'FWD', 250, 2000);
-            await _helpers._runMotors('White', 'FWD', 250, 2000);
+            //            await _helpers._runMotors('Black', 'FWD', 250, 2000);
+            await _helpers._runMotors('Pink', 'TURNFWDL', speed, 4000);
+            await _helpers._runMotors('Pink', 'BACK', speed, 4000);
+            await _helpers._runMotors('Pink', 'TURNFWDR', speed, 4000);
+            await _helpers._runMotors('Pink', 'BACK', speed, 4000);
+            //            await _helpers._runMotors('White', 'FWD', 250, 2000);
             //            await _helpers._runMotors(robotname, 'TURNR', 150, 4000);
             /*            await _helpers._doLED(robotname, 'LEDOFFL');
                         await _helpers._doLED(robotname, 'BLINKR', 500);
@@ -379,7 +414,7 @@ const arduino = {
 
         const cmda = commands.split(",");
 
-        let msg = user.userrobot + " team:" + user.userteam + " user:" + user.firstname + " commands:" + commands;
+        let msg = user.firstname + " (" + user.userrobot + ":" + user.userteam + ") " + commands;
         console.log(msg);
 
 

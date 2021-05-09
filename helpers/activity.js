@@ -78,7 +78,7 @@ const _helpers = {
             }
         }
         if (!userrobot) {
-            console.error("USER is NOT a part of an active robot's team", user, robots);
+            console.error("USER is NOT a part of an active robot's team: " + user.username);
             return false;
         }
         console.log("USER REGISTERED:" + user.username + " (" + user.firstname + ") robot:" + userrobot + " team:" + userteam);

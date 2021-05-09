@@ -1,3 +1,11 @@
+# Build Notes
+
+npm run-script build:css
+(to update the css from tailwind)
+
+npm start
+(to start up the server)
+
 # Controller for Robot Challenge
 
 Note that the server is a Heroku App and this controller runs on the computer connected to the arduino(s)

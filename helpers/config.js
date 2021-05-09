@@ -8,10 +8,24 @@ const _priv = {
     settingsdir: null,
     configs: null,
     challenge: null,
-    watcher: null
+    watcher: null,
+    groupdata: null
 }
 
 const _helpers = {
+    _writeJson: function (folder, name, data) {
+        const filename = name + ".json";
+        const fullpath = path.join(folder, filename);
+
+        fs.writeJson(fullpath, data, err => {
+            if (err) {
+                console.error("ERROR writing to " + filename);
+            } else {
+                console.log("WROTE updates to " + filename);
+            }
+        });
+
+    },
     _readJsonSync: function (folder, name, bQuiet) {
         const filename = name + ".json";
         const fullpath = path.join(folder, filename);
@@ -114,6 +128,10 @@ const _helpers = {
         const mode = config.getConfigData("settings", "challengemode");
         console.log("SETTING up Challenge with " + name + " and mode " + mode);
         config.setupChallenge(name, mode);
+    },
+    _saveDataToFile: function (group, name, data) {
+        const dir = path.join(_priv.settingsdir, "challenges", group);
+        _helpers._writeJson(dir, name, data);
     }
 }
 
@@ -140,29 +158,128 @@ const config = {
 
         _helpers._checkSettings();
         console.log("FINISHED INIT and CHALLENGE IS: ", _priv.challenge);
+        //        console.log("CONFIG DATA", _priv.configs);
 
-        _helpers._watchDir(settingsdir);
+        // DISABLE WATCHDIR
+        //        _helpers._watchDir(settingsdir);
 
         return true;
     },
-    getRobotSettings () {
+    modifyGroupData: function (group, name, action, team, member) {
+        if (!_priv.groupdata || !_priv.groupdata[name]) {
+            this.getGroupData(group, name);
+            if (!_priv.groupdata[name]) {
+                console.error("GROUP data not loaded! " + group);
+                return false;
+            }
+        }
+        if (name == "participants") {
+            console.log("WE ARE ADDING A PART...", member);
+            if (action == "add") {
+                let pa = _priv.groupdata[name].data;
+                if (!pa) {
+                    pa = {};
+                    _priv.groupdata[name].data = pa;
+                }
+                if (member.username) {
+                    if (!pa[member.username]) {
+                        pa[member.username] = {
+                            username: member.username
+                        };
+                    }
+                    if (member.firstname) {
+                        pa[member.username].firstname = member.firstname;
+                    }
+                    if (member.lastname) {
+                        pa[member.username].lastname = member.lastname;
+                    }
+                    if (member.usercode) {
+                        pa[member.username].usercode = member.usercode;
+                    }
+
+                    pa[member.username].absent = member.absent ? true : false;
+
+                    console.log("ADDED new partipant!!!");
+
+                    // Save the changes to participants.
+                    _helpers._saveDataToFile(group, name, _priv.groupdata[name].data);
+                    return true;
+                }
+            }
+        } else if (name == 'teams') {
+            let tobj = _priv.groupdata[name].data[team]
+            if (action == "delete") {
+                // Removes a member from a team
+                if (tobj) {
+                    _priv.groupdata[name].data[team] = tobj.members.filter(user => user !== member);
+                    console.log("HERE is new members in team without " + member, tobj);
+
+                    // Save changes.
+                    _helpers._saveDataToFile(group, name, _priv.groupdata[name].data);
+                    return true;
+                }
+            } else if (action == "add") {
+                // Adds a member to a team
+                if (tobj && !tobj.members.includes(member)) {
+                    tobj.members.push(member);
+
+                    // Save changes.
+                    _helpers._saveDataToFile(group, name, _priv.groupdata[name].data);
+                    return true;
+                }
+            } else if (action == "addteam") {
+                if (!ta) {
+                    _priv.groupdata[name].data[team] = {
+                        members: [],
+                        robot: ""
+                    }
+
+                    // Save changes.
+                    _helpers._saveDataToFile(group, name, _priv.groupdata[name].data);
+                    return true;
+                }
+            }
+        } else {
+            console.error("ERROR - not implemented for " + name);
+        }
+        return false;
+    },
+    getGroupData: function (group, name) {
+        if (!_priv.groupdata) {
+            _priv.groupdata = {};
+        }
+        if (!_priv.groupdata[name]) {
+            // memoize
+            let dir = path.join(_priv.settingsdir, "challenges", group);
+            _priv.groupdata[name] = _helpers._readJsonSync(dir, name);
+        }
+        return _priv.groupdata[name];
+    },
+    getRobotSettings(bAll) {
         let robots = this.getConfigData("robots");
+        //        console.log("config data => robots", robots);
 
         let rets = [];
         for (let robotname in robots) {
             const robot = robots[robotname];
-            if (robot.active) {
+            if (bAll || robot.active) {
                 let nr = {
-                    id: robotname
+                    id: robotname,
+                    active: robot.active
                 };
-                if (robot.port) { nr.port = robot.port; }
+                if (robot.port) {
+                    nr.port = robot.port;
+                }
+                if (robot.metadata) {
+                    Object.assign(nr, robot.metadata);
+                }
                 rets.push(nr);
             }
         }
 
         return rets;
     },
-    getLedSettings (robotname) {
+    getLedSettings(robotname) {
         let robots = this.getConfigData("robots");
 
         if (!robots[robotname] || !robots[robotname].leds) {
@@ -172,7 +289,7 @@ const config = {
 
         return robots[robotname].leds;
     },
-    getMotorSettings (robotname) {
+    getMotorSettings(robotname) {
         let robots = this.getConfigData("robots");
 
         if (!robots[robotname] || !robots[robotname].motors) {
@@ -182,7 +299,7 @@ const config = {
 
         return robots[robotname].motors;
     },
-    getConfigData (name, key) {
+    getConfigData(name, key) {
         if (!_priv.configs[name] || !_priv.configs[name].data) {
             console.error("UNABLE to get config data for " + name, _priv.configs);
             return null;
@@ -200,7 +317,7 @@ const config = {
 
         return data[key];
     },
-    addUserToChallenge (user) {
+    addUserToChallenge(user) {
 
         const testmode = config.getConfigData("settings", "testmode");
 
@@ -222,10 +339,10 @@ const config = {
 
         //        console.log("NEW USER added to challenge", _priv.challenge);
     },
-    getChallenge () {
+    getChallenge() {
         return _priv.challenge;
     },
-    changeMode () {
+    changeMode() {
         if (!_priv.challenge) {
             console.error("Cannot change mode. Challenge not setup!");
             return;
@@ -246,7 +363,7 @@ const config = {
         console.log("SETTING MODE TO " + mode);
         this.setupChallenge(_priv.challenge.name, mode);
     },
-    setupChallenge (name, mode) {
+    setupChallenge(name, mode) {
         console.log("setupChallenge called with " + mode + " -> " + name);
         if (!_priv.challenge) {
             _priv.challenge = {
