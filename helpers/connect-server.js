@@ -6,6 +6,7 @@ const _priv = {
 }
 const _helpers = {
     _init: function (serverurl, cbmap) {
+
         _priv.serverurl = serverurl;
         _priv.socket = io(_priv.serverurl);
         if (!_priv.socket) {
@@ -23,14 +24,23 @@ const _helpers = {
             //            console.log("HERE is the NEWCOMMANDS from server", data);
 
             if (data && data.length > 0) {
-                if (cbmap["command"]) { cbmap["command"](data); }
+                if (cbmap["command"]) {
+                    cbmap["command"](data);
+                }
             }
 
         });
         _priv.socket.on('newUsers', function (data) {
+            /**
+             * data will be an array with objects having props:
+             *  id, challenge, username, usercode 
+             *  (and id is username-usercode)
+             */
             //            console.log("HERE is the NEWUSERS from server", data);
             if (data && data.length > 0) {
-                if (cbmap["user"]) { cbmap["user"](data); }
+                if (cbmap["user"]) {
+                    cbmap["user"](data);
+                }
             }
         });
     }
@@ -44,7 +54,9 @@ const robotServer = {
             console.error("NEED to initialize socket first!");
             return;
         }
-        _priv.socket.emit('challenge', { challenge: challenge });
+        _priv.socket.emit('challenge', {
+            challenge: challenge
+        });
     }
 }
 

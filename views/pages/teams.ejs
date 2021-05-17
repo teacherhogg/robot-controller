@@ -25,8 +25,9 @@
           %> 
 
           <form action="/robotaction" method="post" class="flex space-x-2 text-gray-400 text-sm my-3 absolute right-4 top-2">
+            <input type="text" id="team" name="team" value="<%= teamname %>" class="hidden" />
             <% for (let robot of robots) { %>
-            <button class="w-6 h-6 bg-<%= robot.color %> border-black border rounded-full" name="robotname" value="<%= robot.name %>" type="submit"></button>            
+            <button class="w-6 h-6 bg-<%= robot.color %> border-black border rounded-full" name="robotadd" value="<%= robot.name %>" type="submit"></button>            
             <% } %>
           </form>
 

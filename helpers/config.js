@@ -20,8 +20,6 @@ const _helpers = {
         fs.writeJson(fullpath, data, err => {
             if (err) {
                 console.error("ERROR writing to " + filename);
-            } else {
-                console.log("WROTE updates to " + filename);
             }
         });
 
@@ -130,6 +128,8 @@ const _helpers = {
         config.setupChallenge(name, mode);
     },
     _saveDataToFile: function (group, name, data) {
+        //        console.log("_saveDataToFile called with: " + _priv.settingsdir + ":" + group);
+        //        console.log("JSON DATA for " + name, data);
         const dir = path.join(_priv.settingsdir, "challenges", group);
         _helpers._writeJson(dir, name, data);
     }
@@ -174,7 +174,7 @@ const config = {
             }
         }
         if (name == "participants") {
-            console.log("WE ARE ADDING A PART...", member);
+            //            console.log("WE ARE ADDING A PART...", member);
             if (action == "add") {
                 let pa = _priv.groupdata[name].data;
                 if (!pa) {
@@ -199,7 +199,7 @@ const config = {
 
                     pa[member.username].absent = member.absent ? true : false;
 
-                    console.log("ADDED new partipant!!!");
+                    //                    console.log("ADDED new partipant!!!");
 
                     // Save the changes to participants.
                     _helpers._saveDataToFile(group, name, _priv.groupdata[name].data);
@@ -212,7 +212,7 @@ const config = {
                 // Removes a member from a team
                 if (tobj) {
                     _priv.groupdata[name].data[team] = tobj.members.filter(user => user !== member);
-                    console.log("HERE is new members in team without " + member, tobj);
+                    //                    console.log("HERE is new members in team without " + member, tobj);
 
                     // Save changes.
                     _helpers._saveDataToFile(group, name, _priv.groupdata[name].data);
@@ -227,8 +227,26 @@ const config = {
                     _helpers._saveDataToFile(group, name, _priv.groupdata[name].data);
                     return true;
                 }
+            } else if (action == "robotadd") {
+                // Assigns robot to a team
+                if (!tobj) {
+                    _priv.groupdata[name].data[team] = {
+                        members: [],
+                        robot: ""
+                    }
+                    tobj = _priv.groupdata[name].data[team]
+                }
+
+                if (tobj) {
+                    // member is the robot id
+                    tobj.robot = member;
+
+                    // Save changes.
+                    _helpers._saveDataToFile(group, name, _priv.groupdata[name].data);
+                    return true;
+                }
             } else if (action == "addteam") {
-                if (!ta) {
+                if (!tobj) {
                     _priv.groupdata[name].data[team] = {
                         members: [],
                         robot: ""
@@ -337,7 +355,7 @@ const config = {
             _priv.challenge.robots[user.userrobot].push(user.userteam);
         }
 
-        //        console.log("NEW USER added to challenge", _priv.challenge);
+        console.log("NEW USER added to challenge", _priv.challenge);
     },
     getChallenge() {
         return _priv.challenge;

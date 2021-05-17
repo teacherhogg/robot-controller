@@ -33,7 +33,7 @@ const dbaccess = {
             group = _priv.config.getConfigData("settings", "group");
         }
         _priv.group = group;
-        console.log("getTeams for group " + group);
+        //        console.log("getTeams for group " + group);
 
         let tdata = _priv.config.getGroupData(group, "teams");
         let participants = _priv.config.getGroupData(group, "participants");
@@ -64,7 +64,7 @@ const dbaccess = {
             }
         }
 
-        console.log("HERE is the resulting teams", teams);
+        //        console.log("HERE is the resulting teams", teams);
         return teams;
     },
     getParticipants: function (group) {
@@ -72,17 +72,25 @@ const dbaccess = {
             // Use active group from settings.json
             group = _priv.config.getConfigData("settings", "group");
         }
-        console.log("getTeams for group " + group);
+        //        console.log("getTeams for group " + group);
 
         let participants = _priv.config.getGroupData(group, "participants");
 
         //        console.log("DA participants are", participants);
         return participants.data;
     },
-    dbTeamAction: function (action, team, member) {
-        return _priv.config.modifyGroupData(_priv.group, "teams", action, team, member);
+    dbTeamAction: function (action, team, param) {
+        if (!_priv.group) {
+            // Use active group from settings.json
+            _priv.group = _priv.config.getConfigData("settings", "group");
+        }
+        return _priv.config.modifyGroupData(_priv.group, "teams", action, team, param);
     },
     dbParticipantAction: function (action, params) {
+        if (!_priv.group) {
+            // Use active group from settings.json
+            _priv.group = _priv.config.getConfigData("settings", "group");
+        }
         return _priv.config.modifyGroupData(_priv.group, "participants", action, null, params);
     }
 }

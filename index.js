@@ -40,14 +40,32 @@ const sample = {
   ]
 }
 
-var activate = function (req, res) {
+var activateRobots = function (req, res) {
   console.log("ACTIVATE: HERE is req object", req.body);
-  //  console.log(req.query);
-  //  console.log(req);
+  /** req.body will be object with props the Robot ID and value
+   * "on". If it is empty, that means NO robots are on.
+   **/
+
+
+}
+
+var robotAction = function (req, res) {
+  // Note that req.body does not inherit from Object
+  const params = JSON.parse(JSON.stringify(req.body));
+
+  console.log("ROBOT ACTION", params);
+
+  if (params.hasOwnProperty('robotadd')) {
+    if (dbaccess.dbTeamAction("robotadd", params.team, params.robotadd)) {
+      teams(req, res);
+    } else {
+      console.error("DID NOT PART HAPPEN");
+    }
+  }
 }
 
 var participantAction = function (req, res) {
-  console.log("PARTICIPANT action ", req.body);
+  //  console.log("PARTICIPANT action ", req.body);
 
   // Note that req.body does not inherit from Object
   const params = JSON.parse(JSON.stringify(req.body));
@@ -72,7 +90,7 @@ var teamAction = function (req, res) {
     }
   }
 
-  console.log("TEAM action ZZZZ ", req.body);
+  //  console.log("TEAM action ZZZZ ", req.body);
   for (let item in req.body) {
     let val = req.body[item];
     let tm, mb, act;
@@ -88,6 +106,9 @@ var teamAction = function (req, res) {
         break;
       case 'add':
         _processAction('add', val, req.body.newmember);
+        break;
+      case 'newmember':
+        // Used in add. Ignore.
         break;
       default:
         console.log("IGNORE item ", item);
@@ -133,10 +154,13 @@ app
   }))
   .set('views', path.join(__dirname, 'views'))
   .set('view engine', 'ejs')
-  .get('/', (req, res) => res.render('pages/index'))
+  .get('/', (req, res) => res.render('pages/index', {
+    pagetitle: 'Home'
+  }))
   .get('/db', (req, res) => res.render('pages/db', sample))
-  .post('/activate', activate)
+  .post('/activate', activateRobots)
   .post('/teamaction', teamAction)
+  .post('/robotaction', robotAction)
   .post('/paction', participantAction)
   .get('/robots', robots)
   .get('/teams', teams)
@@ -188,7 +212,8 @@ start = () => {
   // Initialize the boards
   arduino.init(config);
 
-  activity.init(config, arduino);
+  const bOldStyle = false;
+  activity.init(config, arduino, dbaccess, bOldStyle);
 
   const surl = config.getConfigData("settings", "robot-server-url");
   robotServer.init(surl, cbmap);
