@@ -1,9 +1,12 @@
 const arduino = require("./arduino");
+const dbaccess = require("./dataaccess");
 
 var _priv = {
     config: null,
     arduino: null,
     dbaccess: null,
+    ioLocal: null,
+    commandDB: {},
     queue: null
 }
 
@@ -28,6 +31,30 @@ const _helpers = {
             console.error("ERROR - no commands issued!")
             return false;
         }
+
+        //        console.log("processCommands ", user, command.commands);
+        // Send this to the local web socket for webpage updates.
+        let uinfo = _priv.dbaccess.getUserData(user.username);
+        if (!uinfo) {
+            uinfo = {};
+        }
+
+        if (!_priv.commandDB[uinfo.username]) {
+            _priv.commandDB[uinfo.username] = {
+                ncommands: 0
+            };
+        }
+        _priv.commandDB[uinfo.username].ncommands++;
+
+        _priv.ioLocal.emit('commandInfo', {
+            username: user.username,
+            firstname: uinfo.firstname,
+            lastname: uinfo.lastname,
+            userteam: user.userteam,
+            userrobot: user.userrobot,
+            ncommands: _priv.commandDB[uinfo.username].ncommands,
+            command: command.commands
+        })
 
         _priv.arduino.executeCommands(user, command.commands);
     },
@@ -131,20 +158,31 @@ const _helpers = {
         // ADD user to challenge!
         user.userrobot = userinfo.robot;
         user.userteam = userinfo.team;
+
+        let uinfo = _priv.dbaccess.getUserData(user.username);
+        if (!uinfo) {
+            uinfo = {};
+        }
+        uinfo = Object.assign(uinfo, user);
+        _priv.ioLocal.emit('userInfo', uinfo);
+
         _priv.config.addUserToChallenge(user);
     }
 
 }
 
 const activity = {
-    init: function (config, arduino, dbaccess) {
+    init: function (config, arduino, dbaccess, ioLocal) {
         _priv.config = config;
         _priv.arduino = arduino;
         _priv.dbaccess = dbaccess;
+        _priv.ioLocal = ioLocal;
+        _priv.commandDB = {};
         _priv.queue = [];
     },
     resetQueue: function () {
         _priv.queue = [];
+        _priv.commandDB = {};
     },
     processCommand: function (commands) {
         // commands is an array of objects with properties:
@@ -180,7 +218,7 @@ const activity = {
         let challenge = _priv.config.getChallenge();
         if (!challenge || challenge.mode != 'open') {
             console.log("CHALLENGE MODE is " + challenge.mode, challenge);
-            console.log("NEW USER BLOCKED: " + users[0].username);
+            console.log("NEW USER BLOCKED: " + users[0].username + " " + users[0].usercode);
             return;
         }
 

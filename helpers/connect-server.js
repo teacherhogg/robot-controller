@@ -2,6 +2,7 @@ const io = require('socket.io-client');
 
 const _priv = {
     serverurl: null,
+    ioLocal: null,
     socket: null
 }
 const _helpers = {
@@ -22,7 +23,6 @@ const _helpers = {
 
         _priv.socket.on('newCommands', function (data) {
             //            console.log("HERE is the NEWCOMMANDS from server", data);
-
             if (data && data.length > 0) {
                 if (cbmap["command"]) {
                     cbmap["command"](data);

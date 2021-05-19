@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <script src='js/socket.io.js'></script>
+  <script src='js/scripts.js'></script>
   <% include ../partials/header.ejs %>
 </head>
 
@@ -56,8 +58,10 @@
               <% team = teams[teamname]; team.members.forEach(function(member) { %>
                 <form action="/teamaction" method="post" class="space-x-2 text-sm flex">
                   <input type="hidden" name="team" value="<%= teamname %>" />
-                  <h3 class="font-sans font-light text-center bg-grey-lightest pt-1 shadow-md rounded-lg"><%= member.firstname %> <%= member.lastname %></h3>
+                  <h3 id="<%= member.username %>" class="font-sans font-light text-center bg-grey-lightest pt-1 shadow-md rounded-lg"><%= member.firstname %> <%= member.lastname %></h3>
                   <button type="submit" name="delete" value="<%= teamname %>-<%= member.username %>">X</button>
+                  <div id="<%= member.username + '-command'%>" class="bg-blue-200"></div>
+                  <div id="<%= member.username + '-ncommands'%>" class="bg-purple-200"></div>
                 </form>
               <% }); %>
               </div>
@@ -76,7 +80,10 @@
           </div>
       </div>
     <% }); %>
+
+    
   </div>
+
 
   <% include ../partials/teams-footer.ejs %>
 </body>

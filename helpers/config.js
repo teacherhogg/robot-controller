@@ -33,9 +33,10 @@ const _helpers = {
             data = fs.readJsonSync(fullpath);
         } catch (err) {
             if (!bQuiet) {
-                console.error("Error reading file is", err);
+                console.error("Error reading file. Will create!");
             }
-            return null;
+            fs.outputJsonSync(fullpath, {});
+            data = {};
         }
         let rdata = {
             data: data,
@@ -292,6 +293,12 @@ const config = {
             // memoize
             let dir = path.join(_priv.settingsdir, "challenges", group);
             _priv.groupdata[name] = _helpers._readJsonSync(dir, name);
+            if (!_priv.groupdata[name]) {
+                _priv.groupdata[name] = {
+                    data: {},
+                    name: name
+                };
+            }
             //            console.log("getGroupData for " + name, _priv.groupdata[name]);
         }
 
