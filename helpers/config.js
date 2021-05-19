@@ -165,6 +165,24 @@ const config = {
 
         return true;
     },
+    getUserData: function (group, username) {
+        const name = 'participants';
+        if (!_priv.groupdata || !_priv.groupdata[name]) {
+            this.getGroupData(group, name);
+            if (!_priv.groupdata[name]) {
+                console.error("GROUP data not loaded! " + group);
+                return null;
+            }
+        }
+
+        if (_priv.groupdata && _priv.groupdata[name] &&
+            _priv.groupdata[name].data &&
+            _priv.groupdata[name].data[username]) {
+            return _priv.groupdata[name].data[username];
+        } else {
+            console.error("NO such userdata found! " + username + " " + group);
+        }
+    },
     modifyGroupData: function (group, name, action, team, member) {
         if (!_priv.groupdata || !_priv.groupdata[name]) {
             this.getGroupData(group, name);
@@ -211,15 +229,19 @@ const config = {
             if (action == "delete") {
                 // Removes a member from a team
                 if (tobj) {
-                    _priv.groupdata[name].data[team] = tobj.members.filter(user => user !== member);
-                    //                    console.log("HERE is new members in team without " + member, tobj);
+                    _priv.groupdata[name].data[team].members = tobj.members.filter(user => user !== member);
+                    console.log("HERE is new members in team without " + member, tobj);
 
                     // Save changes.
                     _helpers._saveDataToFile(group, name, _priv.groupdata[name].data);
                     return true;
                 }
             } else if (action == "add") {
+                console.log("ADDING member " + member + " to team " + team);
                 // Adds a member to a team
+                if (tobj && !tobj.members) {
+                    tobj.members = [];
+                }
                 if (tobj && !tobj.members.includes(member)) {
                     tobj.members.push(member);
 
@@ -270,7 +292,9 @@ const config = {
             // memoize
             let dir = path.join(_priv.settingsdir, "challenges", group);
             _priv.groupdata[name] = _helpers._readJsonSync(dir, name);
+            //            console.log("getGroupData for " + name, _priv.groupdata[name]);
         }
+
         return _priv.groupdata[name];
     },
     getRobotSettings(bAll) {
@@ -355,7 +379,7 @@ const config = {
             _priv.challenge.robots[user.userrobot].push(user.userteam);
         }
 
-        console.log("NEW USER added to challenge", _priv.challenge);
+        //        console.log("NEW USER added to challenge", _priv.challenge);
     },
     getChallenge() {
         return _priv.challenge;

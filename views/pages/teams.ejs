@@ -55,6 +55,7 @@
               <div class="flex flex-col">
               <% team = teams[teamname]; team.members.forEach(function(member) { %>
                 <form action="/teamaction" method="post" class="space-x-2 text-sm flex">
+                  <input type="hidden" name="team" value="<%= teamname %>" />
                   <h3 class="font-sans font-light text-center bg-grey-lightest pt-1 shadow-md rounded-lg"><%= member.firstname %> <%= member.lastname %></h3>
                   <button type="submit" name="delete" value="<%= teamname %>-<%= member.username %>">X</button>
                 </form>
@@ -62,7 +63,9 @@
               </div>
 
               <form action="/teamaction" method="post" class="flex space-x-2 text-gray-400 text-sm my-3">
-                <select name="newmember" id="new" class="w-5/6">
+                <input type="hidden" name="team" value="<%= teamname %>" />
+                <select name="newmember" id="new" class="w-5/6" onchange="this.form.submit()">
+                  <option disabled selected value>-- choose --</option>
                   <% for (let pt in participants) { %>
                     <option value="<%= pt %>"><%= participants[pt].firstname %> <%= participants[pt].lastname %></option>
                   <% } %>

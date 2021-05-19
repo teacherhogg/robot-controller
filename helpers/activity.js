@@ -13,16 +13,12 @@ const _helpers = {
         //     id, challenge, commands
         if (!challenge || !challenge.users ||
             !challenge.users[command.id]) {
-            console.error("User not registered for challenge " + command.challenge + " (" + command.id + ")");
-            console.error("challenge:", challenge);
-            console.error("command", command);
+            console.error(command.id + " User not registered for " + challenge.name + " -> " + command.commands);
             return false;
         }
 
         if (challenge.name != command.challenge) {
             console.error("challenge incorrect: " + command.challenge + " (" + command.id + ")");
-            console.error("challenge:", challenge);
-            console.error("command", command);
             return false;
         }
 
@@ -35,38 +31,7 @@ const _helpers = {
 
         _priv.arduino.executeCommands(user, command.commands);
     },
-    _isUserKnownOld: function (user, beslack) {
-        const users = _priv.config.getConfigData("participants");
-        let bUserFound = false;
-        for (let ruser of users) {
-            if (ruser.username == user.username) {
-                if (!beslack) {
-                    if (ruser.usercode != user.usercode) {
-                        console.error("INCORRECT usercode for username " + user.username + " code: " + user.usercode);
-                        return false;
-                    } else {
-                        user = Object.assign(user, ruser);
-                        bUserFound = true;
-                    }
-                } else {
-                    // ignore usercode if beslack is true
-                    user = Object.assign(user, ruser);
-                    bUserFound = true;
-                }
-            }
-        }
-        if (!bUserFound) {
-            console.error("INVALID PARTICIPANT username:" + user.username + " usercode:" + user.usercode);
-            return false;
-        } else {
-            return true;
-        }
-    },
-    _isUserKnown: function (user, beslack, bOldStyle) {
-        if (bOldStyle) {
-            return _helpers._isUserKnownOld(user, beslack);
-        }
-
+    _isUserKnown: function (user, beslack) {
         const users = _priv.dbaccess.getParticipants();
         /**
          * users is an object with props usernames and value an object with props:
@@ -74,21 +39,17 @@ const _helpers = {
          */
         //        console.log("HERE is participants", users);
         if (!users[user.username]) {
-            console.error("NO SUCH USER KNOWN " + user.username, user);
+            console.error("Unknown User: " + user.username);
             return false;
         }
         return true;
     },
-    _isUserOnTeamRobot: function (user, bOldStyle) {
-        if (bOldStyle) {
-            return _helpers._isUserOnTeamRobotOld(user);
-        }
-
+    _isUserOnTeamRobot: function (user) {
         const teams = _priv.dbaccess.getTeams();
         //        console.log("HERE is the teams", teams);
 
-        // TODO - CHANGE GETTING LIST OF ROBOTS!!!!
-        const robots = _priv.config.getConfigData("robots");
+        const robots = _priv.dbaccess.getRobots();
+        //        const robots = _priv.config.getConfigData("robots");
         let userrobot = null;
         let userteam = null;
         for (let teamname in teams) {
@@ -96,54 +57,36 @@ const _helpers = {
             for (let member of team.members) {
                 if (member.username == user.username) {
                     // Check if the robot is active!
-                    if (robots[team.robot] && robots[team.robot].active) {
-                        userrobot = team.robot;
-                        userteam = teamname;
-                    }
-                }
-            }
-        }
-        if (!userrobot) {
-            console.error("USER is NOT a part of an active robot's team: " + user.username);
-            console.error("robots", robots);
-            console.error("TEAMS", teams);
-            return null;
-        }
-        console.log("USER REGISTERED:" + user.username + " (" + user.firstname + ") robot:" + userrobot + " team:" + userteam, user);
-        return {
-            team: userteam,
-            robot: userrobot
-        }
-    },
-    _isUserOnTeamRobotOld: function (user) {
-        const robots = _priv.config.getConfigData("robots");
-        let userrobot = null;
-        let userteam = null;
-        for (let robotname in robots) {
-            const robot = robots[robotname];
-            if (robot.active) {
-                for (let team in robot.teams) {
-                    const members = robot.teams[team];
-                    for (let member of members) {
-                        if (member == user.username) {
-                            userrobot = robotname;
-                            userteam = team;
+
+                    for (let robot of robots) {
+                        if (robot.id == team.robot) {
+                            if (robot.active) {
+                                userrobot = team.robot;
+                                userteam = teamname;
+                            }
                         }
                     }
                 }
             }
         }
         if (!userrobot) {
-            console.error("USER is NOT a part of an active robot's team: " + user.username);
+            console.error("USER is NOT a part of an active team: " + user.username);
+            //            console.error("robots", robots);
+            //            console.error("TEAMS", teams);
             return null;
         }
-        console.log("USER REGISTERED:" + user.username + " (" + user.firstname + ") robot:" + userrobot + " team:" + userteam, user);
+        let uinfo = _priv.dbaccess.getUserData(user.username);
+        if (!uinfo) {
+            console.error("ERROR getting user info for " + user.username);
+            uinfo = {};
+        }
+        console.log("USER REGISTERED:" + user.username + " (" + uinfo.firstname + " " + uinfo.lastname + ") robot:" + userrobot + " team:" + userteam);
         return {
             team: userteam,
             robot: userrobot
         }
     },
-    _processUser: function (challenge, user, bOldStyle) {
+    _processUser: function (challenge, user) {
         // user is an object with properties:
         //     id, challenge, username, usercode
 
@@ -151,13 +94,13 @@ const _helpers = {
 
         // STEP 1: Check if user exists (participants.csv)
         //         Update firstname and lastname properties...
-        if (!_helpers._isUserKnown(user, beslack, bOldStyle)) {
+        if (!_helpers._isUserKnown(user, beslack)) {
             return false;
         }
 
         // STEP 2: Is User on a team (robots.json)
         // STEP 3: and is the robot active/enabled (robots.json)
-        const userinfo = _helpers._isUserOnTeamRobot(user, bOldStyle);
+        const userinfo = _helpers._isUserOnTeamRobot(user);
         if (!userinfo) {
             return false;
         }
@@ -194,11 +137,10 @@ const _helpers = {
 }
 
 const activity = {
-    init: function (config, arduino, dbaccess, bOldStyle) {
+    init: function (config, arduino, dbaccess) {
         _priv.config = config;
         _priv.arduino = arduino;
         _priv.dbaccess = dbaccess;
-        _priv.bOldStyle = bOldStyle;
         _priv.queue = [];
     },
     resetQueue: function () {
@@ -238,12 +180,12 @@ const activity = {
         let challenge = _priv.config.getChallenge();
         if (!challenge || challenge.mode != 'open') {
             console.log("CHALLENGE MODE is " + challenge.mode, challenge);
-            console.log("NEW USERS BLOCKED", users);
+            console.log("NEW USER BLOCKED: " + users[0].username);
             return;
         }
 
         for (let user of users) {
-            _helpers._processUser(challenge, user, _priv.bOldStyle);
+            _helpers._processUser(challenge, user);
         }
     }
 }

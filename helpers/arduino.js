@@ -9,6 +9,7 @@ const five = require('johnny-five');
 var _priv = {
     boards: null,
     config: null,
+    dbaccess: null,
     leds: null,
     blocks: {},
     lastuser: {},
@@ -16,9 +17,13 @@ var _priv = {
 }
 
 const _helpers = {
-    _init: function () {
-        let rsettings = _priv.config.getRobotSettings();
-        console.log("Calling init of boards", rsettings);
+    _initRobots: function (cb) {
+        let rsettings = _priv.dbaccess.getRobots(true);
+        let names = [];
+        for (let r of rsettings) {
+            names.push(r.name);
+        }
+        console.log("Calling init of boards: " + names.join(","));
         try {
             _priv.boards = new five.Boards(rsettings);
 
@@ -27,13 +32,16 @@ const _helpers = {
 
                     console.log("arduino boards are now ready");
                     _priv.lastuser = {};
+                    cb("COMPLETED ROBOT INIT");
                 })
                 .on("error", function (err) {
                     console.error("ERROR from connecting to board", err);
+                    cb("ERROR - cannot connect");
                 });
         } catch (err) {
             console.error("ERROR initializing robots!!!");
             console.error(err);
+            cb("ERROR initializing");
         }
     },
     _setupLeds: function (robotname) {
@@ -382,9 +390,10 @@ const _helpers = {
 }
 
 const arduino = {
-    init: function (config) {
+    initRobots: function (config, dbaccess, cb) {
         _priv.config = config;
-        _helpers._init();
+        _priv.dbaccess = dbaccess;
+        _helpers._initRobots(cb);
     },
     testing: function (query, robotname) {
         _helpers._testing(query, robotname);
@@ -413,8 +422,9 @@ const arduino = {
         }
 
         const cmda = commands.split(",");
+        let uinfo = _priv.dbaccess.getUserData(user.username);
 
-        let msg = user.firstname + " (" + user.userrobot + ":" + user.userteam + ") " + commands;
+        let msg = uinfo.firstname + " " + uinfo.lastname + " (" + user.userrobot + ":" + user.userteam + ") " + commands;
         console.log(msg);
 
 

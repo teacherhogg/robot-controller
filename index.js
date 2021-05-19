@@ -41,12 +41,24 @@ const sample = {
 }
 
 var activateRobots = function (req, res) {
-  console.log("ACTIVATE: HERE is req object", req.body);
+  //  console.log("ACTIVATE: HERE is req object", req.body);
   /** req.body will be object with props the Robot ID and value
    * "on". If it is empty, that means NO robots are on.
    **/
 
+  let active = null;
+  if (active = dbaccess.updateActiveRobots(req.body)) {
+    // Activate
+    console.log("Activating Robots", active);
 
+    // Initialize the boards
+    arduino.initRobots(config, dbaccess, function (emsg) {
+      console.log(emsg);
+
+      // Start up in registration for challenge
+      modex();
+    });
+  }
 }
 
 var robotAction = function (req, res) {
@@ -105,10 +117,17 @@ var teamAction = function (req, res) {
         }
         break;
       case 'add':
-        _processAction('add', val, req.body.newmember);
+        if (req.body.newmember) {
+          _processAction('add', req.body.team, req.body.newmember);
+        }
         break;
       case 'newmember':
-        // Used in add. Ignore.
+        if (!req.body.add) {
+          _processAction('add', req.body.team, req.body.newmember);
+        }
+        break;
+      case 'team':
+        // ignore.
         break;
       default:
         console.log("IGNORE item ", item);
@@ -117,12 +136,12 @@ var teamAction = function (req, res) {
 }
 
 var robots = function (req, res) {
-  console.log("ROBOTS: HERE is req object", req);
+  //  console.log("ROBOTS: HERE is req object", req);
   const dbres = {};
   dbres.robots = dbaccess.getRobots();
   dbres.pagetitle = 'Robots';
 
-  console.log("HERE DA ROBOTS", dbres);
+  //  console.log("HERE DA ROBOTS", dbres);
   return res.render('pages/robots', dbres);
 }
 
@@ -192,7 +211,7 @@ testing = (query) => {
 }
 
 
-start = () => {
+initialize = () => {
 
   console.log("start on robot-controller called...")
 
@@ -210,10 +229,9 @@ start = () => {
   dbaccess.init(config);
 
   // Initialize the boards
-  arduino.init(config);
+  //  arduino.initRobots(config, dbaccess);
 
-  const bOldStyle = false;
-  activity.init(config, arduino, dbaccess, bOldStyle);
+  activity.init(config, arduino, dbaccess);
 
   const surl = config.getConfigData("settings", "robot-server-url");
   robotServer.init(surl, cbmap);
@@ -221,7 +239,4 @@ start = () => {
   //  robotServer.joinChallenge("testchallenge");
 }
 
-start();
-
-// Start up in registration for challenge
-modex();
+initialize();
