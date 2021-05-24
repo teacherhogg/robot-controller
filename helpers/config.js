@@ -7,7 +7,6 @@ const _priv = {
     configfiles: ["settings.json", "robots.json", "participants.csv"],
     settingsdir: null,
     configs: null,
-    challenge: null,
     watcher: null,
     groupdata: null
 }
@@ -122,7 +121,7 @@ const _helpers = {
             diff: diff
         }
     },
-    _checkSettings: function () {
+    _checkSettingsDEPRECATED: function () {
         const name = config.getConfigData("settings", "activechallenge");
         const mode = config.getConfigData("settings", "challengemode");
         console.log("SETTING up Challenge with " + name + " and mode " + mode);
@@ -157,8 +156,8 @@ const config = {
             }
         }
 
-        _helpers._checkSettings();
-        console.log("FINISHED INIT and CHALLENGE IS: ", _priv.challenge);
+        //        _helpers._checkSettings();
+        //        console.log("FINISHED INIT and CHALLENGE IS: ", _priv.challenge);
         //        console.log("CONFIG DATA", _priv.configs);
 
         // DISABLE WATCHDIR
@@ -231,14 +230,14 @@ const config = {
                 // Removes a member from a team
                 if (tobj) {
                     _priv.groupdata[name].data[team].members = tobj.members.filter(user => user !== member);
-                    console.log("HERE is new members in team without " + member, tobj);
+                    //                    console.log("HERE is new members in team without " + member, tobj);
 
                     // Save changes.
                     _helpers._saveDataToFile(group, name, _priv.groupdata[name].data);
                     return true;
                 }
             } else if (action == "add") {
-                console.log("ADDING member " + member + " to team " + team);
+                //                console.log("ADDING member " + member + " to team " + team);
                 // Adds a member to a team
                 if (tobj && !tobj.members) {
                     tobj.members = [];
@@ -314,7 +313,8 @@ const config = {
             if (bAll || robot.active) {
                 let nr = {
                     id: robotname,
-                    active: robot.active
+                    active: robot.active,
+                    status: false
                 };
                 if (robot.port) {
                     nr.port = robot.port;
@@ -348,6 +348,12 @@ const config = {
 
         return robots[robotname].motors;
     },
+    /**
+     * 
+     * @param {String} name First part of filename (exclude .json)
+     * @param {String} key Optional key (return ALL if falsey)
+     * @returns data
+     */
     getConfigData(name, key) {
         if (!_priv.configs[name] || !_priv.configs[name].data) {
             console.error("UNABLE to get config data for " + name, _priv.configs);
@@ -365,92 +371,6 @@ const config = {
         }
 
         return data[key];
-    },
-    addUserToChallenge(user) {
-
-        const testmode = config.getConfigData("settings", "testmode");
-
-        // NOTE - testmode is dangerous. Checks are ignored!
-        if (!testmode) {
-            if (!_priv.challenge || !_priv.challenge.mode == "open") {
-                console.error("FATAL ERROR - something wrong in setup for adding user to challenge ", _priv.challenge);
-                return;
-            }
-        }
-
-        _priv.challenge.users[user.id] = user;
-        if (!_priv.challenge.robots[user.userrobot]) {
-            _priv.challenge.robots[user.userrobot] = [];
-        }
-        if (!_priv.challenge.robots[user.userrobot].includes(user.userteam)) {
-            _priv.challenge.robots[user.userrobot].push(user.userteam);
-        }
-
-        //        console.log("NEW USER added to challenge", _priv.challenge);
-    },
-    getChallenge() {
-        return _priv.challenge;
-    },
-    changeMode() {
-        if (!_priv.challenge) {
-            console.error("Cannot change mode. Challenge not setup!");
-            return;
-        }
-
-        const modes = ["open", "closed", "running", "stopped"];
-        let idx = modes.indexOf(_priv.challenge.mode);
-        if (idx == -1) {
-            console.error("SOMETHIGN STRANGE - mode " + _priv.challenge.mode + " not recognized");
-            return;
-        }
-
-        idx++;
-        if (idx >= modes.length) {
-            idx = 0;
-        }
-        let mode = modes[idx];
-        console.log("SETTING MODE TO " + mode);
-        this.setupChallenge(_priv.challenge.name, mode);
-    },
-    setupChallenge(name, mode) {
-        console.log("setupChallenge called with " + mode + " -> " + name);
-        if (!_priv.challenge) {
-            _priv.challenge = {
-                mode: mode,
-                name: name,
-                users: {},
-                robots: {}
-            };
-        } else if (_priv.challenge.name == name && _priv.challenge.mode == mode) {
-            // NO Change. Ignore;
-            return;
-        }
-
-        _priv.challenge.name = name;
-
-        switch (mode) {
-            case "open":
-                // Newly open! Wipe out any previously registered users.
-                _priv.challenge = {
-                    mode: "open",
-                    name: name,
-                    users: {},
-                    robots: {}
-                };
-                console.log("CHALLENGE IS OPEN! " + _priv.challenge.name);
-                break;
-            case "closed":
-                // Newly open! Wipe out any previously registered users.
-                _priv.challenge.mode = "closed";
-                console.log("CHALLENGE IS CLOSED to new users! " + _priv.challenge.name);
-                break;
-            case "running":
-                // Challenge running - commands allowed!
-                _priv.challenge.mode = "running";
-                console.log("CHALLENGE IS RUNNING! " + _priv.challenge.name);
-                break;
-
-        }
     }
 }
 

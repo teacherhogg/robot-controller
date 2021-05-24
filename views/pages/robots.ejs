@@ -4,21 +4,65 @@
   <% include ../partials/header.ejs %>
 </head>
 
-<body class="h-screen overflow-auto flex flex-col min-h-screen" style="background: #edf2f7;">
+<body class="h-screen overflow-auto min-h-screen" style="background: #edf2f7;">
   <% include ../partials/nav.ejs %>
 
-  <div class="m-5">
-    
-  <h2>Robots</h2>
+  <% if (errors && errors.message) { %>
+  <h2 class="bg-red-800 text-white font-bold text-xl"><%= errors.message %></h2>
+  <% } %>
 
-  <form class="w-full max-w-sm" method="post" action="/activate">
-    <div class="flex flex-col">
-        <% robots.forEach(function(r) { %>
-        <label class="inline-flex items-center mt-3">
-            <input type="checkbox" name=<%= r.id %> class="form-checkbox h-5 w-5 text-gray-600" <%= r.active ? 'checked' : '' %> ><span class="ml-5 text-purple-700"><%= r.id %></span>
-        </label>
-        <% }); %>
+  <div class="w-full max-w-md justify-center items-center flex flex-row mt-4">
+ 
+  <form class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4" method="post" action="/activaterobots">
+    <div class="mb-4">
+      <label class="block text-gray-700 text-md font-bold mb-2" for="_group">
+        Group
+      </label>
+      <select name="_group" id="_group" class="w-5/6 border-3 border-black border-solid text-md">
+        <option selected value><%= settings.group %></option>
+        <% for (let grp of settings.groups) { 
+            if (grp !== settings.group) { %>
+              <option value="<%= grp %>"><%= grp %></option>
+        <%  }} %>
+      </select>
     </div>
+    
+    <div class="mb-4">
+      <label class="block text-gray-700 text-md font-bold mb-2" for="_challengename">
+        Challenge Name
+      </label>
+      <select name="_challengename" id="_challengename" class="w-5/6 border-3 border-black border-solid text-md">
+        <option selected value><%= settings.challengeName %></option>
+        <% for (let cname of settings.challengeNames) { 
+            if (cname !== settings.challengeName) { %>
+              <option value="<%= cname %>"><%= cname %></option>
+        <%  }} %>
+      </select>
+    </div>
+
+    <div class="mb-4">
+      <label class="block text-gray-700 text-md font-bold mb-2" for="_challengemode">
+        Challenge Mode
+      </label>
+      <select name="_challengemode" id="_challengemode" class="w-5/6 border-3 border-black border-solid text-md">
+        <option selected value><%= settings.challengeMode %></option>
+        <% for (let cmode of settings.challengeModes) { 
+            if (cmode !== settings.challengeMode) { %>
+              <option value="<%= cmode %>"><%= cmode %></option>
+        <%  }} %>
+      </select>
+    </div>
+
+
+    <div class="mb-4">
+      <label class="block text-gray-700 text-md font-bold mb-2" for="challengename">
+        Robots
+      </label>
+      <% robots.forEach(function(r) { %>
+      <input type="checkbox" name=<%= r.id %> class="form-checkbox h-5 w-5 text-gray-600" <%= r.active ? 'checked' : '' %> ><span class="ml-1 mr-5 text-purple-700"><%= r.id %></span>
+      <% }); %>
+    </div>
+
     <div class="md:flex md:items-center">
       <div class="md:w-1/3"></div>
       <div class="md:w-2/3">

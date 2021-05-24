@@ -21,8 +21,12 @@ const _helpers = {
         let rsettings = _priv.dbaccess.getRobots(true);
         let names = [];
         for (let r of rsettings) {
-            names.push(r.name);
+            names.push({
+                name: r.name,
+                status: false
+            });
         }
+        let cbcalled = false;
         console.log("Calling init of boards: " + names.join(","));
         try {
             _priv.boards = new five.Boards(rsettings);
@@ -32,16 +36,26 @@ const _helpers = {
 
                     console.log("arduino boards are now ready");
                     _priv.lastuser = {};
-                    cb("COMPLETED ROBOT INIT");
+                    for (let r of rsettings) {
+                        r.status = true;
+                    }
+                    _priv.dbaccess.updateRobotStatus(rsettings);
+                    cb(true, "COMPLETED ROBOT INIT");
                 })
                 .on("error", function (err) {
-                    console.error("ERROR from connecting to board", err);
-                    cb("ERROR - cannot connect");
+                    console.error("ERROR from connecting to board: " + cbcalled, err);
+                    if (!cbcalled) {
+                        cbcalled = true;
+                        cb(false, err.message);
+                    }
                 });
         } catch (err) {
             console.error("ERROR initializing robots!!!");
             console.error(err);
-            cb("ERROR initializing");
+            if (!cbcalled) {
+                cbcalled = true;
+                cb(false, "ERROR initializing");
+            }
         }
     },
     _setupLeds: function (robotname) {
@@ -410,9 +424,9 @@ const arduino = {
             return;
         }
 
-        const mode = _priv.config.getConfigData("settings", "mode");
+        const challenge = _priv.dbaccess.getChallengeSettings();
 
-        if (mode == "team") {
+        if (challenge.challengeMode == "team") {
             if (_priv.lastuser[user.userrobot] == user.username) {
                 console.log("BLOCKED " + user.firstname + " on " + user.userrobot);
                 return;
@@ -429,7 +443,7 @@ const arduino = {
 
 
         for (let cmd of cmda) {
-            if (!mode || mode == "sync" || mode == "team") {
+            if (challenge.challengeMode == "sync" || challenge.challengeMode == "team") {
                 await _helpers._executeCommand(user.userrobot, cmd);
             } else {
                 if (_priv.blocks[user.userrobot]) {

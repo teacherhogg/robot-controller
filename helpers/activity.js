@@ -2,7 +2,6 @@ const arduino = require("./arduino");
 const dbaccess = require("./dataaccess");
 
 var _priv = {
-    config: null,
     arduino: null,
     dbaccess: null,
     ioLocal: null,
@@ -14,17 +13,13 @@ const _helpers = {
     _processCommand: function (challenge, command) {
         // commands is an object with properties:
         //     id, challenge, commands
-        if (!challenge || !challenge.users ||
-            !challenge.users[command.id]) {
-            console.error(command.id + " User not registered for " + challenge.name + " -> " + command.commands);
-            return false;
-        }
 
-        if (challenge.name != command.challenge) {
+        if (challenge.challengeName != command.challenge) {
             console.error("challenge incorrect: " + command.challenge + " (" + command.id + ")");
             return false;
         }
 
+        console.log("_processCommand called with command", command);
         const user = challenge.users[command.id];
         // command.commands is a comma-separated list of commands!
         if (!command.commands) {
@@ -58,7 +53,7 @@ const _helpers = {
 
         _priv.arduino.executeCommands(user, command.commands);
     },
-    _isUserKnown: function (user, beslack) {
+    _isUserKnown: function (user) {
         const users = _priv.dbaccess.getParticipants();
         /**
          * users is an object with props usernames and value an object with props:
@@ -117,11 +112,9 @@ const _helpers = {
         // user is an object with properties:
         //     id, challenge, username, usercode
 
-        const beslack = _priv.config.getConfigData("settings", "beslack");
-
         // STEP 1: Check if user exists (participants.csv)
         //         Update firstname and lastname properties...
-        if (!_helpers._isUserKnown(user, beslack)) {
+        if (!_helpers._isUserKnown(user)) {
             return false;
         }
 
@@ -134,23 +127,20 @@ const _helpers = {
 
         // STEP 4: Is this team the ONLY team for specified robot
         //         (unless multiteams is true)
-        const multiteams = _priv.config.getConfigData("settings", "multiteams");
-        if (!multiteams) {
-            const currteams = challenge.robots[userinfo.userrobot];
-            if (currteams && currteams.length > 0 && !currteams.includes(userinfo.userteam)) {
-                console.error("ERROR - PROBLEM encountered where a user from ANOTHER team already registered on this robot for this challenge! " + userteam, challenge);
-                return false;
-            }
-        }
+
+        // TODO - NOT IMPLEMENTED!!!
+        //        if (!challenge.multiteams) {
+        //            const ateams = _priv.dbaccess.getTeams();
+        //        }
 
 
         // STEP 5: Check if current challenge is correct 
-        //         (UNLESS beslack is set to true)
-        if (!beslack) {
-            if (user.challenge != challenge.name) {
+        //         (UNLESS skipChallengeName is set to true)
+        if (!challenge.skipchallengename) {
+            if (user.challenge != challenge.challengeName) {
                 console.error("CANNOT add user " + user.username +
                     " to challenge " + user.challenge +
-                    " because NOT activechallenge: " + challenge.name);
+                    " because NOT activechallenge: " + challenge.challengeName);
                 return false;
             }
         }
@@ -166,14 +156,21 @@ const _helpers = {
         uinfo = Object.assign(uinfo, user);
         _priv.ioLocal.emit('userInfo', uinfo);
 
-        _priv.config.addUserToChallenge(user);
+        // NOTE - testmode is dangerous. Checks are ignored!
+        if (!challenge.testmode) {
+            if (!challenge || challenge.phase != "Open") {
+                console.error("REJECTED REGISTRATION for " + user.username + " Challenge not open. Phase is " + challenge.phase);
+                return;
+            }
+        }
+
+        _priv.dbaccess.registerUserToChallenge(user);
     }
 
 }
 
 const activity = {
-    init: function (config, arduino, dbaccess, ioLocal) {
-        _priv.config = config;
+    init: function (arduino, dbaccess, ioLocal) {
         _priv.arduino = arduino;
         _priv.dbaccess = dbaccess;
         _priv.ioLocal = ioLocal;
@@ -189,13 +186,11 @@ const activity = {
         //          id, timestamp, commands, challenge
         //        console.log("PROCESSING COMMAND", commands);
 
-        let challenge = _priv.config.getChallenge();
-        const testmode = _priv.config.getConfigData("settings", "testmode");
+        let challenge = _priv.dbaccess.getChallengeSettings();
 
-        if (!testmode) {
-            if (!challenge || challenge.mode != 'running') {
-                console.log("CHALLENGE MODE is " + challenge.mode, challenge);
-                console.log("CANNOT EXECUTE NEW COMMANDS. Not running? ", commands);
+        if (!challenge.testmode) {
+            if (!challenge || challenge.phase != 'Running') {
+                console.log("Command Blocked. Challenge not running. Phase is " + challenge.phase);
                 return;
             }
         }
@@ -215,10 +210,9 @@ const activity = {
         //     id, challenge, username, usercode
         //        console.log("PROCESSING USERS", users);
 
-        let challenge = _priv.config.getChallenge();
-        if (!challenge || challenge.mode != 'open') {
-            console.log("CHALLENGE MODE is " + challenge.mode, challenge);
-            console.log("NEW USER BLOCKED: " + users[0].username + " " + users[0].usercode);
+        let challenge = _priv.dbaccess.getChallengeSettings();
+        if (!challenge || challenge.phase !== 'Open') {
+            console.log("Challenge NOT OPEN. NEW USER BLOCKED: " + users[0].username + " " + users[0].usercode);
             return;
         }
 

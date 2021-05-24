@@ -32,10 +32,10 @@ const io = socketIO(server, {
 });
 
 io.on('connection', function (socket) {
-  console.log("USER CONNECTED WEB SERVER");
+  //  console.log("USER CONNECTED WEB SERVER");
 
   socket.on('disconnect', function () {
-    console.log("USER DISCONNECTED FROM WEB SERVER");
+    //    console.log("USER DISCONNECTED FROM WEB SERVER");
   })
 })
 
@@ -45,48 +45,35 @@ server.listen(portLocal, () => {
   //  io.emit('newStuff', "DUDE IS HERE");
 });
 
-
-const sample = {
-  results: [{
-      name: 'Dude1',
-      id: 'Dude ID 1'
-    },
-    {
-      name: 'Dude2',
-      id: 'Dude ID 2'
-    },
-    {
-      name: 'Dude3',
-      id: 'Dude ID 3'
-    },
-    {
-      name: 'Dude4',
-      id: 'Dude ID 4'
-    },
-    {
-      name: 'Dude5',
-      id: 'Dude ID 5'
-    }
-  ]
-}
+const phases = ['Open', 'Closed', 'Running', 'Stopped'];
 
 var activateRobots = function (req, res) {
   //  console.log("ACTIVATE: HERE is req object", req.body);
+
   /** req.body will be object with props the Robot ID and value
    * "on". If it is empty, that means NO robots are on.
+   * Also will have props:
+   *  _group
+   *  _challengename
+   *  _challengemode
    **/
 
   let active = null;
-  if (active = dbaccess.updateActiveRobots(req.body)) {
+  if (active = dbaccess.updateChallengeSettings(req.body)) {
     // Activate
     console.log("Activating Robots", active);
 
     // Initialize the boards
-    arduino.initRobots(config, dbaccess, function (emsg) {
-      console.log(emsg);
+    arduino.initRobots(config, dbaccess, function (success, emsg) {
+      if (!success) {
+        console.error(emsg);
+        robots(req, res, {
+          message: emsg
+        });
+      } else {
+        teams(req, res);
+      }
 
-      // Start up in registration for challenge
-      modex();
     });
   }
 }
@@ -132,7 +119,7 @@ var teamAction = function (req, res) {
     }
   }
 
-  //  console.log("TEAM action ZZZZ ", req.body);
+  console.log("TEAM action ZZZZ ", req.body);
   for (let item in req.body) {
     let val = req.body[item];
     let tm, mb, act;
@@ -159,19 +146,27 @@ var teamAction = function (req, res) {
       case 'team':
         // ignore.
         break;
+      case 'phasex':
+        // Change challenge phase!
+        dbaccess.changePhase(req.body.phasex);
+        console.log("CHANGED PHASE to " + req.body.phasex)
+        teams(req, res);
+        break;
       default:
         console.log("IGNORE item ", item);
     }
   }
 }
 
-var robots = function (req, res) {
+var robots = function (req, res, errors) {
   //  console.log("ROBOTS: HERE is req object", req);
   const dbres = {};
   dbres.robots = dbaccess.getRobots();
+  dbres.settings = dbaccess.getChallengeSettings();
+  dbres.errors = errors;
   dbres.pagetitle = 'Robots';
 
-  //  console.log("HERE DA ROBOTS", dbres);
+  // console.log("HERE DA ROBOTS CALLED", errors);
   return res.render('pages/robots', dbres);
 }
 
@@ -182,7 +177,10 @@ var teams = function (req, res) {
   robj.robots = dbaccess.getRobots();
   robj.teams = dbaccess.getTeams();
   robj.participants = dbaccess.getParticipants();
+  robj.settings = dbaccess.getChallengeSettings();
+  robj.phases = phases;
   robj.pagetitle = 'Teams'
+  //  console.log("HERE are the team C", robj.teams['Team C']);
   //  console.log("HERE DA OBJECT", robj);
   //  console.log("HERE are all participants", robj.participants);
   return res.render('pages/teams', robj);
@@ -206,8 +204,8 @@ app
   .get('/', (req, res) => res.render('pages/index', {
     pagetitle: 'Home'
   }))
-  .get('/db', (req, res) => res.render('pages/db', sample))
-  .post('/activate', activateRobots)
+  .get('/db', (req, res) => res.render('pages/db', {}))
+  .post('/activaterobots', activateRobots)
   .post('/teamaction', teamAction)
   .post('/robotaction', robotAction)
   .post('/paction', participantAction)
@@ -215,7 +213,6 @@ app
   .get('/teams', teams)
   .get('/cool', (req, res) => res.send(cool()))
   .get('/times', (req, res) => res.send(showTimes()))
-  .get('/modex', (req, res) => res.send(modex()))
   .get('/testing', (req, res) => res.send(testing(req.query)))
   .listen(PORT, () => console.log(`Listening on ${PORT}`))
 
@@ -230,11 +227,6 @@ showTimes = () => {
   return result;
 }
 
-modex = () => {
-
-  config.changeMode();
-
-}
 
 testing = (query) => {
   arduino.testing(query, 'Black');
@@ -261,7 +253,7 @@ initialize = () => {
   // Initialize the boards
   //  arduino.initRobots(config, dbaccess);
 
-  activity.init(config, arduino, dbaccess, io);
+  activity.init(arduino, dbaccess, io);
 
   const surl = config.getConfigData("settings", "robot-server-url");
   robotServer.init(surl, cbmap);
