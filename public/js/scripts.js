@@ -28,6 +28,10 @@ var changeElementText = function (id, color, val) {
     document.getElementById(id).innerHTML = "<div class='" + color + "'>" + val + "</div>";
 }
 
+var changeElementText2 = function (id, val) {
+    document.getElementById(id).innerHTML = "<span>" + val + "</span>";
+}
+
 const socket = io('http://localhost:5050');
 
 socket.on('connect', () => {
@@ -41,10 +45,16 @@ socket.on('disconnect', function () {
 socket.on('commandInfo', function (data) {
     console.log("HERE is commandInfo from server", data);
     changeElementText(data.username + '-command', 'bg-blue-200', data.command);
-    changeElementText(data.username + '-ncommands', 'bg-purple-200', data.ncommands);
+    changeElementText2(data.username + '-ncommands', data.ncommands);
+    changeElementText2(data.username + '-ninstructions', data.ninstructions);
+    changeElementText2(data.username + '-nblocked', data.nblocked);
 });
 
 socket.on('userInfo', function (data) {
     console.log("HERE is userInfo from server", data);
     changeElementColor(data.username);
+});
+
+socket.on('message', function (data) {
+    changeElementText('idmessage', 'bg-red-800', data);
 });

@@ -5,7 +5,6 @@ var _priv = {
     arduino: null,
     dbaccess: null,
     ioLocal: null,
-    commandDB: {},
     queue: null
 }
 
@@ -19,39 +18,27 @@ const _helpers = {
             return false;
         }
 
-        console.log("_processCommand called with command", command);
-        const user = challenge.users[command.id];
+        //        console.log("_processCommand called with command", command);
+        const uinfo = _priv.dbaccess.getUserData2(command);
+        //        console.log("HERE is the uinfo  ", uinfo, command);
         // command.commands is a comma-separated list of commands!
+        let ninstructions = 0;
         if (!command.commands) {
             console.error("ERROR - no commands issued!")
             return false;
+        } else {
+            ninstructions = command.commands.split(",").length;
         }
 
-        //        console.log("processCommands ", user, command.commands);
-        // Send this to the local web socket for webpage updates.
-        let uinfo = _priv.dbaccess.getUserData(user.username);
-        if (!uinfo) {
-            uinfo = {};
-        }
+        uinfo.ncommands++;
+        uinfo.ninstructions += ninstructions;
 
-        if (!_priv.commandDB[uinfo.username]) {
-            _priv.commandDB[uinfo.username] = {
-                ncommands: 0
-            };
-        }
-        _priv.commandDB[uinfo.username].ncommands++;
+        let cinfo = Object.assign({}, uinfo);
+        cinfo.command = command.commands;
 
-        _priv.ioLocal.emit('commandInfo', {
-            username: user.username,
-            firstname: uinfo.firstname,
-            lastname: uinfo.lastname,
-            userteam: user.userteam,
-            userrobot: user.userrobot,
-            ncommands: _priv.commandDB[uinfo.username].ncommands,
-            command: command.commands
-        })
+        _priv.ioLocal.emit('commandInfo', cinfo);
 
-        _priv.arduino.executeCommands(user, command.commands);
+        _priv.arduino.executeCommands(uinfo, command.commands);
     },
     _isUserKnown: function (user) {
         const users = _priv.dbaccess.getParticipants();
@@ -115,6 +102,9 @@ const _helpers = {
         // STEP 1: Check if user exists (participants.csv)
         //         Update firstname and lastname properties...
         if (!_helpers._isUserKnown(user)) {
+            const msg = "Unkown user trying to register: " + user.username;
+            console.error(msg);
+            _priv.ioLocal.emit('message', msg);
             return false;
         }
 
@@ -122,6 +112,9 @@ const _helpers = {
         // STEP 3: and is the robot active/enabled (robots.json)
         const userinfo = _helpers._isUserOnTeamRobot(user);
         if (!userinfo) {
+            const msg = "User registering who is not on an active team " + userinfo.username;
+            console.error(msg);
+            _priv.ioLocal.emit('message', msg);
             return false;
         }
 
@@ -138,9 +131,11 @@ const _helpers = {
         //         (UNLESS skipChallengeName is set to true)
         if (!challenge.skipchallengename) {
             if (user.challenge != challenge.challengeName) {
-                console.error("CANNOT add user " + user.username +
+                const msg = "CANNOT add user " + user.username +
                     " to challenge " + user.challenge +
-                    " because NOT activechallenge: " + challenge.challengeName);
+                    " because NOT activechallenge: " + challenge.challengeName;
+                console.error(msg);
+                _priv.ioLocal.emit('message', msg);
                 return false;
             }
         }
@@ -159,7 +154,9 @@ const _helpers = {
         // NOTE - testmode is dangerous. Checks are ignored!
         if (!challenge.testmode) {
             if (!challenge || challenge.phase != "Open") {
-                console.error("REJECTED REGISTRATION for " + user.username + " Challenge not open. Phase is " + challenge.phase);
+                const msg = "REJECTED REGISTRATION for " + user.username + " Challenge not open. Phase is " + challenge.phase;
+                console.error(msg);
+                _priv.ioLocal.emit('message', msg);
                 return;
             }
         }
@@ -174,12 +171,10 @@ const activity = {
         _priv.arduino = arduino;
         _priv.dbaccess = dbaccess;
         _priv.ioLocal = ioLocal;
-        _priv.commandDB = {};
         _priv.queue = [];
     },
     resetQueue: function () {
         _priv.queue = [];
-        _priv.commandDB = {};
     },
     processCommand: function (commands) {
         // commands is an array of objects with properties:
@@ -188,12 +183,6 @@ const activity = {
 
         let challenge = _priv.dbaccess.getChallengeSettings();
 
-        if (!challenge.testmode) {
-            if (!challenge || challenge.phase != 'Running') {
-                console.log("Command Blocked. Challenge not running. Phase is " + challenge.phase);
-                return;
-            }
-        }
 
         //        console.log("PROCESS COMMAND command is ", commands);
         // commands is an array of objects with props: id, challenge, timestamp, commands
@@ -202,6 +191,16 @@ const activity = {
         }
 
         for (let command of commands) {
+            if (!challenge.testmode) {
+                if (!challenge || challenge.phase != 'Running') {
+                    let userinfo = _priv.dbaccess.getUserData2(command);
+                    const msg = "NOT RUNNING. User command blocked from " + userinfo.firstname + " " + userinfo.lastname + " (" + userinfo.username + ")";
+                    console.log(msg);
+                    _priv.ioLocal.emit('message', msg);
+                    return;
+                }
+            }
+
             _helpers._processCommand(challenge, command);
         }
     },
@@ -211,13 +210,15 @@ const activity = {
         //        console.log("PROCESSING USERS", users);
 
         let challenge = _priv.dbaccess.getChallengeSettings();
-        if (!challenge || challenge.phase !== 'Open') {
-            console.log("Challenge NOT OPEN. NEW USER BLOCKED: " + users[0].username + " " + users[0].usercode);
-            return;
-        }
-
         for (let user of users) {
-            _helpers._processUser(challenge, user);
+            if (!challenge || challenge.phase !== 'Open') {
+                let userinfo = _priv.dbaccess.getUserData(user.username);
+                const msg = "NOT OPEN for registration. User blocked: " + userinfo.firstname + " " + userinfo.lastname + " (" + userinfo.username + ")";
+                console.log(msg);
+                _priv.ioLocal.emit('message', msg);
+            } else {
+                _helpers._processUser(challenge, user);
+            }
         }
     }
 }

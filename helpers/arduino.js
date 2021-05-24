@@ -437,10 +437,8 @@ const arduino = {
 
         const cmda = commands.split(",");
         let uinfo = _priv.dbaccess.getUserData(user.username);
-
         let msg = uinfo.firstname + " " + uinfo.lastname + " (" + user.userrobot + ":" + user.userteam + ") " + commands;
         console.log(msg);
-
 
         for (let cmd of cmda) {
             if (challenge.challengeMode == "sync" || challenge.challengeMode == "team") {
@@ -462,7 +460,6 @@ const arduino = {
                 }
             }
         }
-
     }
 }
 

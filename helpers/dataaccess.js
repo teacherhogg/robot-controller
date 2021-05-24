@@ -72,6 +72,22 @@ const dbaccess = {
 
         return _priv.config.getUserData(_priv.challenge.group, username);
     },
+    /**
+     * 
+     * @param {Object} command Is an object with property id that is of form USERNAME-USERCODE 
+     * @returns {Object} userinfo 
+     */
+    getUserData2: function (command) {
+        if (!_priv.challenge) {
+            this.getChallengeSettings();
+        }
+
+        if (!command || !command.id) {
+            return null;
+        }
+        const a = command.id.split("-");
+        return _priv.config.getUserData(_priv.challenge.group, a[0]);
+    },
     updateRobotStatus: function (rarray) {
         for (let arobot of rarray) {
             for (let robot of _priv.robots) {
