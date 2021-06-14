@@ -9,6 +9,27 @@ var _priv = {
 }
 
 const _helpers = {
+    _getCommandSummary: function (commands) {
+        // commands is a potentially comma-separated list of instructions
+        if (ninstructions < 1) {
+            return commands;
+        }
+
+        const a = commands.split(",");
+        let lastcmd = '';
+        let totalt = 0;
+        let validc = 0;
+        for (let citem of a) {
+            let ac = citem.split("-");
+            lastcmd = ac[0];
+            if (ac.length > 2) {
+                totalt += ac[2];
+                validc++;
+            }
+        }
+
+        return lastcmd + " (" + totalt + ") [" + validc + "]";
+    },
     _processCommand: function (challenge, command) {
         // commands is an object with properties:
         //     id, challenge, commands
@@ -34,7 +55,7 @@ const _helpers = {
         uinfo.ninstructions += ninstructions;
 
         let cinfo = Object.assign({}, uinfo);
-        cinfo.command = command.commands;
+        cinfo.command = _helpers._getCommandSummary(command.commands, ninstructions);
 
         _priv.ioLocal.emit('commandInfo', cinfo);
 
@@ -112,7 +133,7 @@ const _helpers = {
         // STEP 3: and is the robot active/enabled (robots.json)
         const userinfo = _helpers._isUserOnTeamRobot(user);
         if (!userinfo) {
-            const msg = "User registering who is not on an active team " + userinfo.username;
+            const msg = "User registering who is not on an active team " + user.username;
             console.error(msg);
             _priv.ioLocal.emit('message', msg);
             return false;
@@ -194,6 +215,9 @@ const activity = {
             if (!challenge.testmode) {
                 if (!challenge || challenge.phase != 'Running') {
                     let userinfo = _priv.dbaccess.getUserData2(command);
+                    if (!userinfo) {
+                        userinfo = {};
+                    }
                     const msg = "NOT RUNNING. User command blocked from " + userinfo.firstname + " " + userinfo.lastname + " (" + userinfo.username + ")";
                     console.log(msg);
                     _priv.ioLocal.emit('message', msg);
@@ -213,6 +237,9 @@ const activity = {
         for (let user of users) {
             if (!challenge || challenge.phase !== 'Open') {
                 let userinfo = _priv.dbaccess.getUserData(user.username);
+                if (!userinfo) {
+                    userinfo = {};
+                }
                 const msg = "NOT OPEN for registration. User blocked: " + userinfo.firstname + " " + userinfo.lastname + " (" + userinfo.username + ")";
                 console.log(msg);
                 _priv.ioLocal.emit('message', msg);

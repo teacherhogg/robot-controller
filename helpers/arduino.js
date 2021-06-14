@@ -352,6 +352,13 @@ const _helpers = {
         }
         cmd.trim();
         let cmda = cmd.split("-");
+        if (cmda.length != 3) {
+            console.error("ERROR - cmd malformed " + cmd);
+            if (cb) {
+                cb("ERROR");
+            }
+            return;
+        }
         let tlen;
 
         //        console.log("RUNNING COMMAND:" + cmd + ":");
@@ -441,22 +448,25 @@ const arduino = {
         console.log(msg);
 
         for (let cmd of cmda) {
-            if (challenge.challengeMode == "sync" || challenge.challengeMode == "team") {
-                await _helpers._executeCommand(user.userrobot, cmd);
-            } else {
-                if (_priv.blocks[user.userrobot]) {
-                    console.log("BLOCKED - command currently running on " + user.userrobot);
+            // ignore blank entries.
+            if (cmd) {
+                if (challenge.challengeMode == "sync" || challenge.challengeMode == "team") {
+                    await _helpers._executeCommand(user.userrobot, cmd);
                 } else {
-                    // Only ONE command set per robot at a time.
-                    _priv.blocks[user.userrobot] = true;
-                    _helpers._executeCommand(user.userrobot, cmd, function (err, rname) {
-                        _priv.blocks[user.userrobot] = false;
-                        if (err) {
-                            console.error("ERROR returned from _executeCommand");
-                        } else {
-                            console.log("COMPLETE for " + user.userrobot);
-                        }
-                    });
+                    if (_priv.blocks[user.userrobot]) {
+                        console.log("BLOCKED - command currently running on " + user.userrobot);
+                    } else {
+                        // Only ONE command set per robot at a time.
+                        _priv.blocks[user.userrobot] = true;
+                        _helpers._executeCommand(user.userrobot, cmd, function (err, rname) {
+                            _priv.blocks[user.userrobot] = false;
+                            if (err) {
+                                console.error("ERROR returned from _executeCommand");
+                            } else {
+                                console.log("COMPLETE for " + user.userrobot);
+                            }
+                        });
+                    }
                 }
             }
         }

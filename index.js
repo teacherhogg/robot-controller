@@ -116,10 +116,10 @@ var teamAction = function (req, res) {
       teams(req, res);
     } else {
       console.error("DID NOT HAPPEN!");
+      console.log("TEAM action ZZZZ ", req.body);
     }
   }
 
-  console.log("TEAM action ZZZZ ", req.body);
   for (let item in req.body) {
     let val = req.body[item];
     let tm, mb, act;

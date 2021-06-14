@@ -83,7 +83,7 @@ const dbaccess = {
         }
 
         if (!command || !command.id) {
-            return null;
+            return {};
         }
         const a = command.id.split("-");
         return _priv.config.getUserData(_priv.challenge.group, a[0]);
@@ -221,7 +221,7 @@ const dbaccess = {
         let teams = this.getTeams(_priv.challenge.challengeName);
 
         if (action == 'addteam') {
-            // Add to memoized teams
+            // Add new team
             if (!teams[team]) {
                 teams[team] = {
                     members: [],
@@ -231,6 +231,7 @@ const dbaccess = {
             // Also add to teams.json
             return _priv.config.modifyGroupData(_priv.challenge.group, "teams", action, team, param);
         } else if (action == "delete") {
+            // Delete member from team
             teams[team].members = teams[team].members.filter(function (el) {
                 if (el.username == param) {
                     return false;
@@ -241,6 +242,7 @@ const dbaccess = {
             // Also update teams.json
             return _priv.config.modifyGroupData(_priv.challenge.group, "teams", action, team, param);
         } else if (action == "add") {
+            // Add member to team
             const exists = teams[team].members.some((el) => el.username == param);
             if (!exists) {
                 let userobj = this.getUserData(param);
@@ -253,6 +255,17 @@ const dbaccess = {
                 // Also add to teams.json
                 return _priv.config.modifyGroupData(_priv.challenge.group, "teams", action, team, param);
             }
+        } else if (action == "robotadd") {
+            // Associate Robot ot the team
+            if (!teams[team]) {
+                // Doesn't make sense. Should exist
+                return false;
+            }
+            // param will the robot name
+            teams[team].robot = param;
+
+            // Also add to teams.json
+            return _priv.config.modifyGroupData(_priv.challenge.group, "teams", action, team, param);
         }
     },
     dbParticipantAction: function (action, params) {
