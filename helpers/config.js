@@ -181,6 +181,7 @@ const config = {
             return _priv.groupdata[name].data[username];
         } else {
             console.error("NO such userdata found! " + username + " " + group);
+            return {};
         }
     },
     modifyGroupData: function (group, name, action, team, member) {

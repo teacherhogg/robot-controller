@@ -11,10 +11,6 @@ var _priv = {
 const _helpers = {
     _getCommandSummary: function (commands) {
         // commands is a potentially comma-separated list of instructions
-        if (ninstructions < 1) {
-            return commands;
-        }
-
         const a = commands.split(",");
         let lastcmd = '';
         let totalt = 0;
@@ -23,12 +19,13 @@ const _helpers = {
             let ac = citem.split("-");
             lastcmd = ac[0];
             if (ac.length > 2) {
-                totalt += ac[2];
+                let tsec = parseInt(ac[2], 10) * 0.001
+                totalt += tsec;
                 validc++;
             }
         }
 
-        return lastcmd + " (" + totalt + ") [" + validc + "]";
+        return lastcmd + " (" + totalt + " s) [" + validc + " i]";
     },
     _processCommand: function (challenge, command) {
         // commands is an object with properties:
