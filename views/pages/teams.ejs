@@ -36,7 +36,7 @@
           <div class="mt-8">
               <p class="text-xl font-semibold my-2"><%= teamname %> </p>
               
-              <div class="flex space-x-2 text-gray-400 text-sm">
+              <div class="flex space-x-2 text-gray-400 text-sm hidden">
                   <!-- svg  -->
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -45,30 +45,35 @@
                     <p><%= teamname %></p> 
               </div>
 
-              <div class="flex space-x-2 text-gray-400 text-sm my-3">
+              <div class="flex space-x-2 text-gray-400 text-sm my-3 hidden">
                   <!-- svg  -->
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
-                    <p>1 Weeks Left</p> 
+                    <p>info pane</p> 
               </div>
-              <div class="border-t-2"></div>
+              <div class="border-t-2 border-green-500"></div>
 
               <div class="flex flex-col">
               <% team = teams[teamname]; team.members.forEach(function(member) { %>
-                <form action="/teamaction" method="post" class="space-x-2 text-sm flex">
-                  <button type="submit" name="delete" value="<%= teamname %>-<%= member.username %>">X</button>
-                  <input type="hidden" name="team" value="<%= teamname %>" />
-                  <% if (member.registered) { %>
-                    <h3 id="<%= member.username %>" class="font-sans font-light text-center bg-green-300 px-2 pt-1 shadow-md rounded-lg"><%= member.firstname %> <%= member.lastname %></h3>
-                  <% } else { %>
-                    <h3 id="<%= member.username %>" class="font-sans font-light text-center bg-grey-lightest px-2 pt-1 shadow-md rounded-lg"><%= member.firstname %> <%= member.lastname %></h3>
-                  <% } %>
-                  <div id="<%= member.username + '-command'%>" class="bg-blue-200"></div>
-                  <div id="<%= member.username + '-ncommands'%>" class="bg-purple-500 text-white text-xl px-2 rounded-full"><%= member.ncommands %></div>
-                  <div id="<%= member.username + '-ninstructions'%>" class="bg-indigo-800 text-white text-xl px-2 rounded-full"><%= member.ninstructions %></div>
-                  <div id="<%= member.username + '-nblocked'%>" class="bg-red-800 text-white text-xl px-2 rounded-full"><%= member.nblocked %></div>
+                <form action="/teamaction" method="post" class="text-md space-y-2 flex flex-col">
+                  <div class="flex space-x-2">
+                    <button type="submit" name="delete" value="<%= teamname %>-<%= member.username %>">X</button>
+                    <input type="hidden" name="team" value="<%= teamname %>" />
+                    <% if (member.registered) { %>
+                      <h3 id="<%= member.username %>" class="font-sans font-light text-center bg-green-300 px-2 pt-1 shadow-md rounded-lg"><%= member.firstname %> <%= member.lastname %></h3>
+                    <% } else { %>
+                      <h3 id="<%= member.username %>" class="font-sans font-light text-center bg-grey-lightest px-2 pt-1 shadow-md rounded-lg"><%= member.firstname %> <%= member.lastname %></h3>
+                    <% } %>
+                    <div id="<%= member.username + '-command'%>" class="bg-blue-200"></div>
+                  </div>
+                  <div class="flex space-x-2">
+                    <div id="<%= member.username + '-ncommands'%>" class="bg-purple-500 text-white text-xl px-2 rounded-full"><%= member.ncommands %></div>
+                    <div id="<%= member.username + '-ninstructions'%>" class="bg-indigo-800 text-white text-xl px-2 rounded-full"><%= member.ninstructions %></div>
+                    <div id="<%= member.username + '-nblocked'%>" class="bg-red-800 text-white text-xl px-2 rounded-full"><%= member.nblocked %></div>
+                  </div>
                 </form>
+                <div class="mt-2 border-t-2 border-green-600"></div>
               <% }); %>
               </div>
 
