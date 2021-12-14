@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <% include ../partials/header.ejs %>
+  <%- include('../partials/header.ejs'); %>
 </head>
 
 <body class="h-screen overflow-auto min-h-screen" style="background: #edf2f7;">
-  <% include ../partials/nav.ejs %>
+  <%- include('../partials/nav.ejs'); %>
 
   <% if (errors && errors.message) { %>
   <h2 class="bg-red-800 text-white font-bold text-xl p-2"><%= errors.message %></h2>

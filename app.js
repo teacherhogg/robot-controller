@@ -21,7 +21,7 @@ const io = socketIO(server, {
 });
 
 io.on('connection', function (socket) {
-  //  console.log("USER CONNECTED WEB SERVER");
+  console.log("USER CONNECTED WEB SERVER");
 
   socket.on('disconnect', function () {
     //    console.log("USER DISCONNECTED FROM WEB SERVER");

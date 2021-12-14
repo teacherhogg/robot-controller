@@ -3,11 +3,11 @@
 <head>
   <script src='js/socket.io.js'></script>
   <script src='js/scripts.js'></script>
-  <% include ../partials/header.ejs %>
+  <%- include('../partials/header.ejs'); %>
 </head>
 
 <body class="h-screen overflow-auto flex flex-col min-h-screen" style="background: #edf2f7;">
-  <% include ../partials/nav.ejs %>
+  <%- include('../partials/nav.ejs'); %>
 
   <div class="flex flex-row flex-wrap items-center justify-center space-x-2">
     <% Object.keys(teams).forEach(function(teamname) { %>
@@ -145,6 +145,6 @@
 
   <div id="idmessage" class="font-bold text-lg text-white bg-red-800 px-4"></div>
 
-  <% include ../partials/teams-footer.ejs %>
+  <%- include('../partials/teams-footer.ejs'); %>
 </body>
 </html>
