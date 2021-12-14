@@ -8,7 +8,7 @@
   <% include ../partials/nav.ejs %>
 
   <% if (errors && errors.message) { %>
-  <h2 class="bg-red-800 text-white font-bold text-xl"><%= errors.message %></h2>
+  <h2 class="bg-red-800 text-white font-bold text-xl p-2"><%= errors.message %></h2>
   <% } %>
 
   <div class="w-full max-w-md justify-center items-center flex flex-row mt-4">
@@ -59,7 +59,7 @@
         Robots
       </label>
       <% robots.forEach(function(r) { %>
-      <input type="checkbox" name=<%= r.id %> class="form-checkbox h-5 w-5 text-gray-600" <%= r.active ? 'checked' : '' %> ><span class="ml-1 mr-5 text-purple-700"><%= r.id %></span>
+      <input type="checkbox" name=<%= r.id %> class="form-checkbox h-5 w-5 text-gray-600" <%= r.active ? 'checked' : '' %> ><span class="ml-1 mr-5 text-purple-700"><%= r.name %></span>
       <% }); %>
     </div>
 

@@ -207,25 +207,6 @@ const dbaccess = {
     }
     return _priv.teams[_priv.challenge.group][_priv.challenge.challengeName];
   },
-  addTeam: function (teamname) {
-    return this.dbTeamAction("addteam", teamname);
-  },
-  deleteTeam: function (teamid) {
-    if (_priv.teams && _priv.teams[_priv.challenge.group] && _priv.teams[_priv.challenge.group][_priv.challenge.challengeName]) {
-      for (let team in _priv.teams[_priv.challenge.group][_priv.challenge.challengeName]) {
-        if (team == teamid) {
-          //           delete team;
-          console.log("DELETE DELETE TEAM TEAM " + teamid, _priv.teams);
-          let ret = this.dbTeamAction("deleteteam", teamid);
-          console.log("GOTSA delete", ret);
-          delete _priv.teams[_priv.challenge.group][_priv.challenge.challengeName][team];
-          return ret;
-        }
-      }
-    }
-
-    return false;
-  },
   removeParticipantFromTeam: function (teamid, username) {
     return this.dbTeamAction("delete", teamid, username);
   },
@@ -250,6 +231,7 @@ const dbaccess = {
     return participants.data;
   },
   dbTeamAction: function (action, team, param) {
+    console.log("dbTeamAction got " + action + " for " + team, param);
     if (!_priv.challenge) {
       this.getChallengeSettings();
     }
@@ -269,7 +251,9 @@ const dbaccess = {
       return _priv.config.modifyGroupData(_priv.challenge.group, "teams", action, team, param);
     } else if (action == "deleteteam") {
       // Delete the team
-      return _priv.config.modifyGroupData(_priv.challenge.group, "teams", action, team, param);
+      const ret = _priv.config.modifyGroupData(_priv.challenge.group, "teams", action, team, param);
+      delete _priv.teams[_priv.challenge.group][_priv.challenge.challengeName][team];
+      return ret;
     } else if (action == "delete") {
       // Delete member from team
       teams[team].members = teams[team].members.filter(function (el) {

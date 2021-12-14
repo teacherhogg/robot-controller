@@ -17,6 +17,15 @@ var _priv = {
 }
 
 const _helpers = {
+    _findRobotFromError: function (rsettings, err) {
+        let rfound = null;
+        for (let r of rsettings) {
+            if (err.includes(r.port)) {
+                rfound = r;
+            }
+        }
+        return rfound;
+    },
     _initRobots: function (cb) {
         let rsettings = _priv.dbaccess.getRobots(true);
         let names = [];
@@ -56,7 +65,15 @@ const _helpers = {
                     console.error("ERROR from connecting to board: " + cbcalled, err);
                     if (!cbcalled) {
                         cbcalled = true;
-                        cb(false, err.message);
+
+                        let emsg = "ERROR connecting to robot.";
+                        if (err && err.message) {
+                            let rfound = _helpers._findRobotFromError(rsettings, err.message);
+                            if (rfound) {
+                                emsg = "ERROR connecting to " + rfound.name + " on port " + rfound.port;
+                            }
+                        }
+                        cb(false, emsg);
                     }
                 });
         } catch (err) {

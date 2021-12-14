@@ -16,9 +16,9 @@
           <% if (teams[teamname].robot) { 
               for (let r of robots) {
                 if (r.id == teams[teamname].robot) { %>
-                  <div class=" text-white flex items-center absolute rounded-full py-3 px-3 shadow-xl bg-<%= r.color %> left-4 -top-6">
+                  <div class="text-<%= r.colortext %> flex items-center absolute rounded-full py-3 px-3 shadow-xl bg-<%= r.color %> left-4 -top-6">
                       <!-- svg  -->
-                      <object data="\icons\<%= r.icon %>" class="w-10 h-10 rounded-full" ></object>
+                      <object type="image/svg+xml" data="\icons\<%= r.icon %>" class="w-10 h-10 rounded-full z-50" ></object>
                   </div>
           <% 
                 }
@@ -29,29 +29,40 @@
           <form action="/robotaction" method="post" class="flex space-x-2 text-gray-400 text-sm my-3 absolute right-4 top-2">
             <input type="text" id="team" name="team" value="<%= teamname %>" class="hidden" />
             <% for (let robot of robots) { %>
-            <button class="w-6 h-6 bg-<%= robot.color %> border-black border rounded-full" name="robotadd" value="<%= robot.name %>" type="submit"></button>            
+              <span class="has-tooltip">
+                <span class="tooltip rounded shadow-lg p-1 bg-gray-200 text-red-500 mt-8"><%= robot.name %></span>
+                <button class="w-4 h-4 bg-<%= robot.color %> border-black border rounded-full" name="robotadd" value="<%= robot.id %>" type="submit"></button>            
+              </span>
             <% } %>
           </form>
 
           <div class="mt-8">
-              <p class="text-xl font-semibold my-2"><%= teamname %> </p>
-              
-              <div class="flex space-x-2 text-gray-400 text-sm hidden">
-                  <!-- svg  -->
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
+              <form action="/teamaction" method="post" class="text-md space-y-2 flex flex-col">
+                <div class="flex space-x-2">
+                  <span class="has-tooltip">
+                    <span class="tooltip rounded shadow-lg p-1 bg-gray-200 text-red-500 -mt-8">Will Delete Team!</span>
+                    <button type="submit" name="deleteteam" class="text-red-600 has-tooltip" value="<%= teamname %>">X</button>
+                  </span>
+                  <p class="text-xl font-semibold my-2"><%= teamname %> </p>
+                </div>
+                
+                <div class="flex space-x-2 text-gray-400 text-sm hidden">
+                    <!-- svg  -->
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
                     <p><%= teamname %></p> 
-              </div>
+                </div>
 
-              <div class="flex space-x-2 text-gray-400 text-sm my-3 hidden">
-                  <!-- svg  -->
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                    <p>info pane</p> 
-              </div>
+                <div class="flex space-x-2 text-gray-400 text-sm my-3 hidden">
+                    <!-- svg  -->
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                      <p>info pane</p> 
+                </div>
+              </form>
               <div class="border-t-2 border-green-500"></div>
 
               <div class="flex flex-col">
