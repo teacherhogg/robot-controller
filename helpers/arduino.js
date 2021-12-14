@@ -25,6 +25,8 @@ const _helpers = {
                 name: r.name,
                 status: false
             });
+            // NOTE: Did this to prevent board closing immediately!
+            r.repl = false;
         }
         let cbcalled = false;
         console.log("Calling init of boards: " + names.join(","));
@@ -40,6 +42,14 @@ const _helpers = {
                         r.status = true;
                     }
                     _priv.dbaccess.updateRobotStatus(rsettings);
+                    console.log("BOARDS done and ready...", rsettings);
+
+                    this.each(function (board) {
+                        console.log("GOTS a board: " + board.id);
+                        board.on("message", function (event) {
+                            console.log("Got a message type " + event.class, event.message);
+                        });
+                    });
                     cb(true, "COMPLETED ROBOT INIT");
                 })
                 .on("error", function (err) {

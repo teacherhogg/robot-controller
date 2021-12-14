@@ -71,7 +71,8 @@ var activateRobots = function (req, res) {
           message: emsg
         });
       } else {
-        teams(req, res);
+        console.log("FINISHED initRobots!!!");
+        //        teams(req, res);
       }
 
     });
@@ -166,7 +167,7 @@ var robots = function (req, res, errors) {
   dbres.errors = errors;
   dbres.pagetitle = 'Robots';
 
-  // console.log("HERE DA ROBOTS CALLED", errors);
+  console.log("HERE DA ROBOTS CALLED");
   return res.render('pages/robots', dbres);
 }
 
@@ -183,6 +184,7 @@ var teams = function (req, res) {
   //  console.log("HERE are the team C", robj.teams['Team C']);
   //  console.log("HERE DA OBJECT", robj);
   //  console.log("HERE are all participants", robj.participants);
+  console.log("ROCKING TEAMS...");
   return res.render('pages/teams', robj);
 }
 
@@ -254,11 +256,15 @@ initialize = () => {
   //  arduino.initRobots(config, dbaccess);
 
   activity.init(arduino, dbaccess, io);
+  console.log("activity.init done");
 
   const surl = config.getConfigData("settings", "robot-server-url");
   robotServer.init(surl, cbmap);
+
 
   //  robotServer.joinChallenge("testchallenge");
 }
 
 initialize();
+
+module.exports = app;

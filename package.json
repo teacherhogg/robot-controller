@@ -3,11 +3,11 @@
   "version": "0.3.0",
   "description": "Robot Controller using Johnny-Five",
   "engines": {
-    "node": "12.x"
+    "node": "16.x"
   },
-  "main": "index.js",
+  "main": "main.js",
   "scripts": {
-    "start": "node index.js",
+    "start": "electron .",
     "build:css": "postcss public/styles/tailwind.css -o public/styles/style.css",
     "test": "node test.js"
   },
@@ -22,12 +22,15 @@
     "express": "^4.15.2",
     "fs-extra": "^9.0.1",
     "johnny-five": "^2.0.0",
+    "js-yaml": "^4.1.0",
     "postcss": "^8.2.10",
     "socket.io": "^3.0.3",
     "socket.io-client": "^3.0.3",
     "tailwindcss": "^2.1.1"
   },
   "devDependencies": {
+    "electron": "^16.0.4",
+    "electron-rebuild": "^3.2.5",
     "got": "^11.3.0",
     "tape": "^4.7.0"
   }
