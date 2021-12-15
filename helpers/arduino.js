@@ -1,9 +1,7 @@
 //const SerialPort = require("chrome-apps-serialport").SerialPort;
 //const SerialPort = require('serialport').SerialPort
 //const Firmata = require("firmata-io")(SerialPort);
-const {
-    response
-} = require('express');
+
 const five = require('johnny-five');
 
 var _priv = {
@@ -112,15 +110,15 @@ const _helpers = {
             }
         }
     },
-    _setupMotors: function (robotname) {
+    _setupMotors: function (robotid) {
         if (!_priv.motors) {
             _priv.motors = {};
         }
-        if (!_priv.motors[robotname]) {
-            const minfo = _priv.config.getMotorSettings(robotname);
+        if (!_priv.motors[robotid]) {
+            const minfo = _priv.config.getMotorSettings(robotid);
 
             //            console.log("HERE are the motor settings for robot " + robotname, minfo);
-            const board = _priv.boards.byId(robotname);
+            const board = _priv.boards.byId(robotid);
             let lsettings = minfo.left;
             lsettings.board = board;
             let rsettings = minfo.right;
@@ -130,7 +128,7 @@ const _helpers = {
             let motorR = new five.Motor(rsettings)
 
             if (!motorL || !motorR) {
-                console.error("ERROR getting motor setup!!! " + robotname);
+                console.error("ERROR getting motor setup!!! " + robotid);
                 return;
             }
             /*
@@ -138,16 +136,16 @@ const _helpers = {
                             motorL, motorR
                         });
             */
-            _priv.motors[robotname] = {
+            _priv.motors[robotid] = {
                 left: motorL,
                 right: motorR
             }
         }
     },
-    _runMotors: function (robotname, cmd, inspeed, time) {
-        //        console.log("Running Motors on " + robotname + " " + cmd + " for " + time);
-        _helpers._setupMotors(robotname);
-        const motors = _priv.motors[robotname];
+    _runMotors: function (robotid, cmd, inspeed, time) {
+        console.log("Running Motors on " + robotid + " " + cmd + " for " + time);
+        _helpers._setupMotors(robotid);
+        const motors = _priv.motors[robotid];
 
         return new Promise((resolve, reject) => {
             if (!motors || !motors.left || !motors.right) {
@@ -255,12 +253,15 @@ const _helpers = {
                         return;
                 }
 
-                //              console.log("RUNNING CMD " + cmd + " at speed " + speed + " for time " + time);
-                const board = _priv.boards.byId(robotname);
+                console.log("RUNNING CMD " + cmd + " at speed " + speed + " for time " + time);
+                const board = _priv.boards.byId(robotid);
                 if (!board) {
-                    reject(new Error('board.byId ' + robotname + ' returning NULL!'));
+                    reject(new Error('board.byId ' + robotid + ' returning NULL!'));
                 } else {
                     board.wait(time, () => {
+                        console.log("TIMES UP!")
+                        //                        motorL.reverse(255);
+                        //                        motorR.reverse(255);
                         motorL.stop();
                         motorR.stop();
                         resolve('DONE');
@@ -369,7 +370,7 @@ const _helpers = {
         }
         return bRet;
     },
-    _executeCommand: async function (robotname, cmd, cb) {
+    _executeCommand: async function (robotid, cmd, cb) {
         if (!cmd) {
             console.error("ERROR - cmd not set");
             if (cb) {
@@ -404,7 +405,9 @@ const _helpers = {
                 const speed = parseInt(cmda[1], 10);
                 tlen = parseInt(cmda[2], 10);
                 //                console.log("STARTING motor command " + cmda[0], speed, tlen);
-                await _helpers._runMotors(robotname, cmda[0], speed, tlen);
+                console.log("RUN " + cmda[0] + " for " + tlen);
+                await _helpers._runMotors(robotid, cmda[0], speed, tlen);
+                console.log("DONE runMotors!")
                 break;
             case 'LEDON':
             case 'LEDONL':
@@ -422,7 +425,7 @@ const _helpers = {
                 if (cmda.length > 1) {
                     tlen = parseInt(cmda[1], 10);
                 }
-                bRet = _helpers._doLED(robotname, cmda[0], tlen);
+                bRet = _helpers._doLED(robotid, cmda[0], tlen);
                 break
             default:
                 console.log("Unsupported cmd " + cmda[0]);
@@ -431,7 +434,7 @@ const _helpers = {
         }
 
         if (cb) {
-            cb(null, robotname);
+            cb(null, robotid);
         }
         return bRet;
     }
@@ -445,6 +448,40 @@ const arduino = {
     },
     testing: function (query, robotname) {
         _helpers._testing(query, robotname);
+    },
+    driveRobotLocal: async function (robotid, commands, dir) {
+        console.log('driveRobotLocal ' + robotid + ' -> ' + dir);
+        if (!_priv.boards) {
+            let error = 'Robots not initialized!';
+            console.error(error);
+            return error;
+        }
+
+        if (dir) {
+            // Just do dir if present.
+            let cmd;
+            switch (dir) {
+                case 'forward':
+                    cmd = 'FWD-255-1000';
+                    break;
+                case 'back':
+                    cmd = 'BACK-255-1000';
+                    break;
+                case 'left':
+                    cmd = 'TURNL-255-1000';
+                    break;
+                case 'right':
+                    cmd = 'TURNR-255-1000';
+                    break;
+                default:
+                    cmd = 'FWD-255-1000';
+            }
+            console.log("driveRobotLocal " + robotid + " with cmd " + cmd);
+            await _helpers._executeCommand(robotid, cmd);
+            return '';
+        }
+
+        return 'Did Nothing!';
     },
     executeCommands: async function (user, commands) {
         // commands is a comma-separated list of commands.

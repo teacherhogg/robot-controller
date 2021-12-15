@@ -14,6 +14,8 @@ var router = express.Router();
 
 const phases = ['Open', 'Closed', 'Running', 'Stopped'];
 
+let activerobots = [];
+
 var activateRobots = function (req, res) {
     //  console.log("ACTIVATE: HERE is req object", req.body);
 
@@ -25,10 +27,9 @@ var activateRobots = function (req, res) {
      *  _challengemode
      **/
 
-    let active = null;
-    if (active = dbaccess.updateChallengeSettings(req.body)) {
-        // Activate
-        console.log("Activating Robots", active);
+    if (activerobots = dbaccess.updateChallengeSettings(req.body)) {
+        // Activate. actve is an array of robotids 
+        console.log("Activating Robots", activerobots);
 
         // Initialize the boards
         arduino.initRobots(config, dbaccess, function (success, emsg) {
@@ -129,6 +130,77 @@ var teamAction = function (req, res) {
     }
 }
 
+const robotMove = async function (req, res, errors) {
+    let response = '';
+    let robotid = null;
+    let dir = null;
+    for (let item in req.body) {
+        let val = req.body[item];
+        console.log("move " + item, val);
+        if (item == 'robotid') {
+            robotid = val;
+        } else if (item == 'robotmove') {
+            dir = val;
+        }
+    }
+    if (dir && robotid) {
+        response = await arduino.driveRobotLocal(robotid, null, dir);
+    } else {
+        response = 'Not enought params...';
+    }
+    res.end(response);
+}
+
+let chooseRobotForDriving = function (req, res, errors) {
+    for (let item in req.body) {
+        let val = req.body[item];
+        console.log("ROBOT CHOSEN " + item, val);
+    }
+}
+
+let robotDriving = function (req, res, errors) {
+    const dbres = {};
+    let availrobots = [];
+    let activerobot = '';
+    if (!activerobots || activerobots.length < 1) {
+        errors = {
+            message: 'Cannot drive robots yet. First need to go to Robots and initialize one or more.'
+        };
+    } else {
+        //  console.log("ROBOTS: HERE is req object", req);
+        const robots = dbaccess.getRobots();
+
+        for (let robot of activerobots) {
+            for (let r of robots) {
+                if (robot == r.id) {
+                    availrobots.push(r);
+                }
+            }
+        }
+        if (availrobots.length < 1) {
+            errors = {
+                message: 'Error getting active robot.'
+            };
+        } else {
+            activerobot = availrobots[0].id;
+        }
+    }
+
+    dbres.robots = availrobots;
+    dbres.activerobot = activerobot;
+    dbres.settings = dbaccess.getChallengeSettings();
+    dbres.errors = errors;
+    dbres.pagetitle = 'Robot Driving';
+
+
+    const host = req.protocol + "://" + req.get('host');
+    console.log("HERE is the host", host);
+    dbres.robothost = host;
+
+    console.log("HERE DA ROBOTS CALLED");
+    return res.render('pages/robotdrive', dbres);
+}
+
 var robots = function (req, res, errors) {
     //  console.log("ROBOTS: HERE is req object", req);
     const dbres = {};
@@ -176,11 +248,14 @@ router
         pagetitle: 'Home'
     }))
     .get('/db', (req, res) => res.render('pages/db', {}))
+    .post('/driverobot', chooseRobotForDriving)
     .post('/activaterobots', activateRobots)
     .post('/teamaction', teamAction)
     .post('/robotaction', robotAction)
     .post('/paction', participantAction)
+    .post('/robotmove', robotMove)
     .get('/robots', robots)
+    .get('/robotdrive', robotDriving)
     .get('/teams', teams)
     .get('/cool', (req, res) => res.send(cool()))
     .get('/times', (req, res) => res.send(showTimes()))
