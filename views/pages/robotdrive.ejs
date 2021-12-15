@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <%- include('../partials/header.ejs'); %>
+</head>
+
+<body class="h-screen overflow-auto min-h-screen" style="background: #edf2f7;">
+  <%- include('../partials/nav.ejs'); %>
+
+  <% if (errors && errors.message) { %>
+  <h2 class="bg-red-800 text-white font-bold text-xl p-2"><%= errors.message %></h2>
+  <% } %>
+
+  <div class="w-full max-w-md justify-center items-center flex flex-row mt-4">
+ 
+    <form class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4" method="post" action="/driverobot">
+
+      <div class="mb-4">
+        <label class="block text-gray-700 text-md font-bold mb-2" for="_group">
+          Active Robots
+        </label>
+        <select name="activerobot" id="activerobot" class="w-5/6 border-3 border-black border-solid text-md" onchange='this.form.submit();'>
+          <option selected value><%= activerobot %></option>
+          <% for (let r of robots) { %>
+              <option value="<%= r.name %>"><%= r.name %></option>
+          <% } %>
+        </select>
+      </div>
+    </form>
+
+    <div class="flex flex-col items-center py-3 px-3 shadow-xl bg-yellow-400 left-4 -top-6">
+      <!-- svg  -->
+      <span class="flex flex-row">
+        <img src="\icons\left.svg"    class="invisible w-10 h-10 rounded-full bg-teal-400" />
+        <img src="\icons\forward.svg" class="w-10 h-10 rounded-full border-solid border-4 border-black" onclick="moveRobot('forward')" />
+        <img src="\icons\left.svg"    class="invisible w-10 h-10 rounded-full bg-teal-400" />
+      </span>
+      <span class="flex flex-row">
+        <img src="\icons\left.svg"  class="w-10 h-10 rounded-full border-solid border-4 border-black"" onclick="moveRobot('left')" />
+        <img src="\icons\left.svg"  class="invisible w-10 h-10 rounded-full bg-teal-400" />
+        <img src="\icons\right.svg" class="w-10 h-10 rounded-full border-solid border-4 border-black"" onclick="moveRobot('right')" />
+      </span>
+      <span class="flex flex-row">
+        <img src="\icons\left.svg"  class="invisible w-10 h-10 rounded-full bg-teal-400" />
+        <img src="\icons\back.svg"  class="w-10 h-10 rounded-full border-solid border-4 border-black"" onclick="moveRobot('back')" />
+        <img src="\icons\left.svg"  class="invisible w-10 h-10 rounded-full bg-teal-400" />
+      </span>
+    </div>
+ 
+
+
+  </div>
+
+</body>
+</html>
+
+<script type="text/javascript">
+
+let scurrRobot = null;
+
+changeRobot = function(robotid) {
+  console.log("changeRobot called with " + robotid);
+  scurrRobot = robotid;
+}
+
+moveRobot = function(dir) {
+  console.log("WE GOTS a movement in dir " + dir);
+  if (!scurrRobot) {
+    alert("Must choose a robot first.");
+    return;
+  }
+  postMoveRequest(dir);
+}
+
+postMoveRequest = function(dir) {
+
+  const host = '<%= robothost %>';
+  console.log("postRequest host! " + host);
+
+  const xhr = new XMLHttpRequest();
+  const params = 'robotmove='+dir+'&robotid='+scurrRobot;
+  const url = host + '/robotmove';
+  xhr.open('POST', url, true);
+
+  //Send the proper header information along with the request
+  xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+
+  xhr.onload = function() {//Call a function when the state changes.
+    if(xhr.status == 200) {
+      console.log("RESPONSE " + this.responseText);
+      if (this.responseText) {
+        alert(this.responseText);
+      }
+    } else {
+      console.error("Got status retunred " + xhr.status);
+    }
+  }
+
+  xhr.send(params);
+}
+
+</script>
