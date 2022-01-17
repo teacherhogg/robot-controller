@@ -162,6 +162,9 @@ let robotDriving = function (req, res, errors) {
     const dbres = {};
     let availrobots = [];
     let activerobot = '';
+    console.log("HERE ARE ACTIVE ROBOTS!");
+    console.log(JSON.stringify(activerobots));
+
     if (!activerobots || activerobots.length < 1) {
         errors = {
             message: 'Cannot drive robots yet. First need to go to Robots and initialize one or more.'
@@ -169,6 +172,9 @@ let robotDriving = function (req, res, errors) {
     } else {
         //  console.log("ROBOTS: HERE is req object", req);
         const robots = dbaccess.getRobots();
+
+        console.log("HERE ARE ALL ROBOTS");
+        console.log(JSON.stringify(robots));
 
         for (let robot of activerobots) {
             for (let r of robots) {
@@ -185,6 +191,9 @@ let robotDriving = function (req, res, errors) {
             activerobot = availrobots[0].id;
         }
     }
+
+    console.log("HERE IS activerobot " + activerobot);
+    console.log(JSON.stringify(availrobots));
 
     dbres.robots = availrobots;
     dbres.activerobot = activerobot;

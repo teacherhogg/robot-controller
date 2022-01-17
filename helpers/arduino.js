@@ -3,6 +3,9 @@
 //const Firmata = require("firmata-io")(SerialPort);
 
 const five = require('johnny-five');
+const {
+    Motor_Move_Absolute
+} = require('johnny-five/lib/evshield');
 
 var _priv = {
     boards: null,
@@ -115,9 +118,10 @@ const _helpers = {
             _priv.motors = {};
         }
         if (!_priv.motors[robotid]) {
+            console.log("SETTING UP MOTORS for robotid " + robotid);
             const minfo = _priv.config.getMotorSettings(robotid);
 
-            //            console.log("HERE are the motor settings for robot " + robotname, minfo);
+            console.log("HERE are the motor settings for robot " + robotid, minfo);
             const board = _priv.boards.byId(robotid);
             let lsettings = minfo.left;
             lsettings.board = board;
@@ -161,12 +165,14 @@ const _helpers = {
                     case 'FWD':
                         corr = 0;
                         speed = Math.max(Math.min(inspeed, 255 - corr), corr);
+                        console.log("MOVING forward with speed " + speed);
                         motorL.forward(speed + corr);
                         motorR.forward(speed - corr);
                         break;
                     case 'BACK':
                         corr = 0;
                         speed = Math.max(Math.min(inspeed, 255 - corr), corr);
+                        console.log("MOVING backward with speed " + speed);
                         motorL.reverse(speed + corr);
                         motorR.reverse(speed - corr);
                         break;
@@ -264,6 +270,7 @@ const _helpers = {
                         //                        motorR.reverse(255);
                         motorL.stop();
                         motorR.stop();
+                        console.log("STOPPED!");
                         resolve('DONE');
                     });
                 }

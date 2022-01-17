@@ -13,16 +13,16 @@
 
   <div class="w-full max-w-md justify-center items-center flex flex-row mt-4">
  
-    <form class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4" method="post" action="/driverobot">
+    <form class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
 
       <div class="mb-4">
-        <label class="block text-gray-700 text-md font-bold mb-2" for="_group">
+        <label class="block text-gray-700 text-md font-bold mb-2" for="_activerobot">
           Active Robots
         </label>
-        <select name="activerobot" id="activerobot" class="w-5/6 border-3 border-black border-solid text-md" onchange='this.form.submit();'>
-          <option selected value><%= activerobot %></option>
+        <select name="_activerobot" id="_activerobot" class="w-5/6 border-3 border-black border-solid text-md" onchange="changeRobot()">
+          <option disabled selected value>-- choose --</option>
           <% for (let r of robots) { %>
-              <option value="<%= r.name %>"><%= r.name %></option>
+              <option value="<%= r.id %>"><%= r.name %></option>
           <% } %>
         </select>
       </div>
@@ -56,16 +56,17 @@
 
 <script type="text/javascript">
 
-let scurrRobot = null;
+let scurrrobot = '';
 
-changeRobot = function(robotid) {
-  console.log("changeRobot called with " + robotid);
-  scurrRobot = robotid;
+changeRobot = function(val) {
+  console.log("CHHANGE robot called with ");
+  scurrrobot = document.getElementById("_activerobot").value;
+  console.log("activerobot: " + scurrrobot);
 }
 
 moveRobot = function(dir) {
   console.log("WE GOTS a movement in dir " + dir);
-  if (!scurrRobot) {
+  if (!scurrrobot) {
     alert("Must choose a robot first.");
     return;
   }
@@ -78,8 +79,9 @@ postMoveRequest = function(dir) {
   console.log("postRequest host! " + host);
 
   const xhr = new XMLHttpRequest();
-  const params = 'robotmove='+dir+'&robotid='+scurrRobot;
+  const params = 'robotmove='+dir+'&robotid='+scurrrobot;
   const url = host + '/robotmove';
+  console.log("/robotmove with params", params);
   xhr.open('POST', url, true);
 
   //Send the proper header information along with the request
