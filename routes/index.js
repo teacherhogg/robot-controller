@@ -10,9 +10,37 @@ const cool = require('cool-ascii-faces')
 
 var express = require('express');
 var router = express.Router();
-
+let settingsdir = 'unknown';
 
 const phases = ['Open', 'Closed', 'Running', 'Stopped'];
+
+
+const portLocal = 5050;
+const socketIO = require('socket.io');
+const {
+    app
+} = require('electron')
+
+const server = require('http').createServer();
+const io = socketIO(server, {
+    cors: {
+        origin: '*'
+    }
+});
+
+io.on('connection', function (socket) {
+    console.log("USER CONNECTED WEB SERVER");
+
+    socket.on('disconnect', function () {
+        //    console.log("USER DISCONNECTED FROM WEB SERVER");
+    })
+})
+
+server.listen(portLocal, () => {
+    console.log("Local Server is up on " + portLocal);
+
+    //  io.emit('newStuff', "DUDE IS HERE");
+});
 
 let activerobots = [];
 
@@ -159,6 +187,12 @@ let chooseRobotForDriving = function (req, res, errors) {
 }
 
 let robotDriving = function (req, res, errors) {
+    if (!settingsdir) {
+        console.error("Unable to proceed until settings dir setup!");
+        showHome(req, res);
+        return;
+    }
+
     const dbres = {};
     let availrobots = [];
     let activerobot = '';
@@ -210,7 +244,13 @@ let robotDriving = function (req, res, errors) {
     return res.render('pages/robotdrive', dbres);
 }
 
-var robots = function (req, res, errors) {
+let robots = function (req, res, errors) {
+    if (!settingsdir) {
+        console.error("Unable to proceed until settings dir setup!");
+        showHome(req, res);
+        return;
+    }
+
     //  console.log("ROBOTS: HERE is req object", req);
     const dbres = {};
     dbres.robots = dbaccess.getRobots();
@@ -222,7 +262,13 @@ var robots = function (req, res, errors) {
     return res.render('pages/robots', dbres);
 }
 
-var teams = function (req, res) {
+let teams = function (req, res) {
+    if (!settingsdir) {
+        console.error("Unable to proceed until settings dir setup!");
+        showHome(req, res);
+        return;
+    }
+
     let robj = {
         pagetitle: 'Teams'
     }
@@ -252,10 +298,30 @@ testing = (query) => {
     arduino.testing(query, 'Black');
 }
 
-router
+let showHome = function (req, res) {
+    let errors = null;
+    if (!settingsdir) {
+        errors = {
+            message: "The Settings Folder must be set FIRST before proceeding. App will need to be restarted once settings folder specified."
+        }
+    }
+
+    res.render('pages/index', {
+        pagetitle: 'Home',
+        settingsdir: settingsdir,
+        errors: errors
+    });
+}
+/*
     .get('/', (req, res) => res.render('pages/index', {
-        pagetitle: 'Home'
+        pagetitle: 'Home',
+        settingsdir: settingsdir,
+        errors: ''
     }))
+*/
+router
+    .get('/', showHome)
+    .get('/setup', (req, res) => res.render('pages/setup'))
     .get('/db', (req, res) => res.render('pages/db', {}))
     .post('/driverobot', chooseRobotForDriving)
     .post('/activaterobots', activateRobots)
@@ -270,7 +336,7 @@ router
     .get('/times', (req, res) => res.send(showTimes()))
     .get('/testing', (req, res) => res.send(testing(req.query)))
 
-initialize = () => {
+initialize = async () => {
 
     console.log("start on robot-controller called...")
 
@@ -279,9 +345,14 @@ initialize = () => {
         "user": activity.processUser
     };
 
-    if (!config.init(process.env.SETTINGS)) {
-        console.error("FATAL ERROR doing config setup!")
-        return;
+    settingsdir = config.getSettingsDir();
+
+    // settingsdir = process.env.SETTINGS;
+
+    if (settingsdir) {
+        if (!config.init(settingsdir)) {
+            console.error("FATAL ERROR doing config setup!")
+        }
     }
 
     // Initialize 
@@ -290,7 +361,7 @@ initialize = () => {
     // Initialize the boards
     //  arduino.initRobots(config, dbaccess);
 
-    activity.init(arduino, dbaccess);
+    activity.init(arduino, dbaccess, io);
     console.log("activity.init done");
 
     const surl = config.getConfigData("settings", "robot-server-url");

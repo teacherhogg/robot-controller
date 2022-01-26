@@ -11,29 +11,6 @@ const PORT = process.env.PORT || 5000
 // const { Server } = require('socket.io');
 // const io = new Server(3000);
 
-const portLocal = 5050;
-const socketIO = require('socket.io');
-const server = require('http').createServer();
-const io = socketIO(server, {
-  cors: {
-    origin: '*'
-  }
-});
-
-io.on('connection', function (socket) {
-  console.log("USER CONNECTED WEB SERVER");
-
-  socket.on('disconnect', function () {
-    //    console.log("USER DISCONNECTED FROM WEB SERVER");
-  })
-})
-
-server.listen(portLocal, () => {
-  console.log("Local Server is up on " + portLocal);
-
-  //  io.emit('newStuff', "DUDE IS HERE");
-});
-
 
 /*   .use(express.urlencoded({
       extended: true  

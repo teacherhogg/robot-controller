@@ -30,6 +30,8 @@ const _helpers = {
         for (let member of tdata.data[team].members) {
           if (!participants.data[member]) {
             console.error("ERROR - no such participant " + member + " in team " + team);
+            console.error(tdata);
+            console.log("HERE is the participants for group " + group, participants.data);
           } else {
             let mobj = participants.data[member];
             mobj.username = member;
@@ -231,7 +233,7 @@ const dbaccess = {
     return participants.data;
   },
   dbTeamAction: function (action, team, param) {
-    console.log("dbTeamAction got " + action + " for " + team, param);
+    console.log("dbTeamAction got " + action + " for " + team + " (challenge " + _priv.challenge.group + ")", param);
     if (!_priv.challenge) {
       this.getChallengeSettings();
     }
@@ -297,6 +299,8 @@ const dbaccess = {
     if (!_priv.challenge) {
       this.getChallengeSettings();
     }
+    console.log("dbParticipantAction " + action, params);
+
     return _priv.config.modifyGroupData(_priv.challenge.group, "participants", action, null, params);
   }
 }

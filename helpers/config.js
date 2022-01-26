@@ -3,13 +3,17 @@ const fs = require('fs-extra')
 const path = require('path')
 const yaml = require('js-yaml')
 const objDiff = require('deep-object-diff').diff;
+const {
+  LocalStorage
+} = require('node-localstorage');
 
 const _priv = {
-  configfiles: ["settings.json", "robots.yml", "participants.csv"],
+  configfiles: ["settings.yml", "robots.yml", "participants.csv"],
   settingsdir: null,
   configs: null,
   watcher: null,
-  groupdata: null
+  groupdata: null,
+  localstorage: null
 }
 
 const _helpers = {
@@ -85,7 +89,7 @@ const _helpers = {
       data = fs.readJsonSync(fullpath);
     } catch (err) {
       if (!bQuiet) {
-        console.error("Error reading file. Will create!");
+        console.error("Error reading file. Will create! " + filename);
       }
       fs.outputJsonSync(fullpath, {});
       data = {};
@@ -174,12 +178,6 @@ const _helpers = {
       diff: diff
     }
   },
-  _checkSettingsDEPRECATED: function () {
-    const name = config.getConfigData("settings", "activechallenge");
-    const mode = config.getConfigData("settings", "challengemode");
-    console.log("SETTING up Challenge with " + name + " and mode " + mode);
-    config.setupChallenge(name, mode);
-  },
   _saveDataToFile: function (group, name, data) {
     //        console.log("_saveDataToFile called with: " + _priv.settingsdir + ":" + group);
     //        console.log("JSON DATA for " + name, data);
@@ -189,12 +187,35 @@ const _helpers = {
     } else {
       _helpers._writeJson(dir, name, data);
     }
+  },
+  _addCSVParticipants: function (participants) {
+    // participants is an array of objects
+    for (let p of participants) {
+      config.modifyGroupData(p.group, "participants", "add", null, p);
+    }
+
+    console.log("JUST added " + participants.length + " new participants!");
+  },
+  _getLocalStorage: function () {
+    if (!_priv.localstorage) {
+      _priv.localstorage = new LocalStorage('./scratch');
+    }
+    return _priv.localstorage;
   }
 }
 
 const config = {
+  getSettingsDir: function () {
+    console.log("HELLOW DIR SETTINGS!")
+    let settingsdir = _helpers._getLocalStorage().getItem('SETTINGS');
+    return settingsdir;
+  },
+  setSettingsDir: function (settingsdir) {
+    console.log("HELLOW DIR SETTINGS!")
+    _helpers._getLocalStorage().setItem('SETTINGS', settingsdir);
+    console.log("Just set the localstorage to " + settingsdir);
+  },
   init: function (settingsdir) {
-    // Load settings.json
     console.log("SETTINGS DIR in config" + settingsdir);
     _priv.settingsdir = settingsdir;
     _priv.configs = {};
@@ -213,7 +234,13 @@ const config = {
         _priv.configs[a[0]] = _helpers._readJsonSync(settingsdir, a[0]);
       } else if (a[1] == "csv") {
         _priv.configs[a[0]] = _helpers._readCSVSync(settingsdir, a[0]);
+        console.log("CSV participants! for " + a[0], _priv.configs[a[0]]);
       }
+    }
+
+    if (_priv.configs.participants && _priv.configs.participants.data && _priv.configs.participants.data.length > 0) {
+      // Import any CSV participants that not already done.
+      _helpers._addCSVParticipants(_priv.configs.participants.data);
     }
 
     //        _helpers._checkSettings();
@@ -227,27 +254,29 @@ const config = {
   },
   getUserData: function (group, username) {
     const name = 'participants';
-    if (!_priv.groupdata || !_priv.groupdata[name]) {
+    const key = group + "-" + name;
+    if (!_priv.groupdata || !_priv.groupdata[key]) {
       this.getGroupData(group, name);
-      if (!_priv.groupdata[name]) {
+      if (!_priv.groupdata[key]) {
         console.error("GROUP data not loaded! " + group);
         return null;
       }
     }
 
-    if (_priv.groupdata && _priv.groupdata[name] &&
-      _priv.groupdata[name].data &&
-      _priv.groupdata[name].data[username]) {
-      return _priv.groupdata[name].data[username];
+    if (_priv.groupdata && _priv.groupdata[key] &&
+      _priv.groupdata[key].data &&
+      _priv.groupdata[key].data[username]) {
+      return _priv.groupdata[key].data[username];
     } else {
       console.error("NO such userdata found! " + username + " " + group);
       return {};
     }
   },
   modifyGroupData: function (group, name, action, team, member) {
-    if (!_priv.groupdata || !_priv.groupdata[name]) {
+    const key = group + "-" + name;
+    if (!_priv.groupdata || !_priv.groupdata[key]) {
       this.getGroupData(group, name);
-      if (!_priv.groupdata[name]) {
+      if (!_priv.groupdata[key]) {
         console.error("GROUP data not loaded! " + group);
         return false;
       }
@@ -255,10 +284,10 @@ const config = {
     if (name == "participants") {
       //            console.log("WE ARE ADDING A PART...", member);
       if (action == "add") {
-        let pa = _priv.groupdata[name].data;
+        let pa = _priv.groupdata[key].data;
         if (!pa) {
           pa = {};
-          _priv.groupdata[name].data = pa;
+          _priv.groupdata[key].data = pa;
         }
         if (member.username) {
           if (!pa[member.username]) {
@@ -281,20 +310,20 @@ const config = {
           //                    console.log("ADDED new partipant!!!");
 
           // Save the changes to participants.
-          _helpers._saveDataToFile(group, name, _priv.groupdata[name].data);
+          _helpers._saveDataToFile(group, name, _priv.groupdata[key].data);
           return true;
         }
       }
     } else if (name == 'teams') {
-      let tobj = _priv.groupdata[name].data[team]
+      let tobj = _priv.groupdata[key].data[team]
       if (action == "delete") {
         // Removes a member from a team
         if (tobj) {
-          _priv.groupdata[name].data[team].members = tobj.members.filter(user => user !== member);
+          _priv.groupdata[key].data[team].members = tobj.members.filter(user => user !== member);
           //                    console.log("HERE is new members in team without " + member, tobj);
 
           // Save changes.
-          _helpers._saveDataToFile(group, name, _priv.groupdata[name].data);
+          _helpers._saveDataToFile(group, name, _priv.groupdata[key].data);
           return true;
         }
       } else if (action == "add") {
@@ -307,34 +336,34 @@ const config = {
           tobj.members.push(member);
 
           // Save changes.
-          _helpers._saveDataToFile(group, name, _priv.groupdata[name].data);
+          _helpers._saveDataToFile(group, name, _priv.groupdata[key].data);
           return true;
         }
       } else if (action == "robotadd") {
         // Assigns robot to a team
-        console.log("Adding robot to team! " + team + "->" + member, _priv.groupdata[name]);
+        console.log("Adding robot to team! " + team + "->" + member, _priv.groupdata[key]);
         if (tobj) {
           tobj.robot = member;
-          _helpers._saveDataToFile(group, name, _priv.groupdata[name].data);
+          _helpers._saveDataToFile(group, name, _priv.groupdata[key].data);
           return true;
         }
       } else if (action == "addteam") {
         if (!tobj) {
-          _priv.groupdata[name].data[team] = {
+          _priv.groupdata[key].data[team] = {
             members: [],
             robot: ""
           }
 
           // Save changes.
-          _helpers._saveDataToFile(group, name, _priv.groupdata[name].data);
+          _helpers._saveDataToFile(group, name, _priv.groupdata[key].data);
           return true;
         }
       } else if (action == "deleteteam") {
 
-        //        console.log("DELETEING name:" + name + " team:" + team, _priv.groupdata[name]);
-        delete _priv.groupdata[name].data[team]
-        _helpers._saveDataToFile(group, name, _priv.groupdata[name].data);
-        console.log("HERE IS TEAMS AFTER DELETE of " + name + "->" + team, _priv.groupdata[name].data);
+        //        console.log("DELETEING name:" + name + " team:" + team, _priv.groupdata[key]);
+        delete _priv.groupdata[key].data[team]
+        _helpers._saveDataToFile(group, name, _priv.groupdata[key].data);
+        console.log("HERE IS TEAMS AFTER DELETE of " + name + "->" + team, _priv.groupdata[key].data);
         return true;
       }
     } else {
@@ -343,23 +372,24 @@ const config = {
     return false;
   },
   getGroupData: function (group, name) {
+    const key = group + "-" + name;
     if (!_priv.groupdata) {
       _priv.groupdata = {};
     }
-    if (!_priv.groupdata[name]) {
+    if (!_priv.groupdata[key]) {
       // memoize
       let dir = path.join(_priv.settingsdir, "challenges", group);
-      _priv.groupdata[name] = _helpers._readJsonSync(dir, name);
-      if (!_priv.groupdata[name]) {
-        _priv.groupdata[name] = {
+      _priv.groupdata[key] = _helpers._readJsonSync(dir, name);
+      if (!_priv.groupdata[key]) {
+        _priv.groupdata[key] = {
           data: {},
           name: name
         };
       }
-      //            console.log("getGroupData for " + name, _priv.groupdata[name]);
+      //            console.log("getGroupData for " + name, _priv.groupdata[key]);
     }
 
-    return _priv.groupdata[name];
+    return _priv.groupdata[key];
   },
   getRobotSettings(bAll) {
     let robots = this.getConfigData("robots");
@@ -413,7 +443,8 @@ const config = {
    * @returns data
    */
   getConfigData(name, key) {
-    if (!_priv.configs[name] || !_priv.configs[name].data) {
+    console.log("getConfigData for " + name);
+    if (!_priv.configs || !_priv.configs[name] || !_priv.configs[name].data) {
       console.error("UNABLE to get config data for " + name, _priv.configs);
       return null;
     }

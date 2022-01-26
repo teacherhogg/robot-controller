@@ -4,11 +4,36 @@
   <%- include('../partials/header.ejs'); %>
 </head>
 
-<body>
-
+<body class="h-screen overflow-auto min-h-screen" style="background: #edf2f7;">
   <%- include('../partials/nav.ejs'); %>
 
-  <h6>Robot Controller Goodness</h6>
+  <% if (errors && errors.message) { %>
+  <h2 class="bg-red-800 text-white font-bold text-xl p-2"><%= errors.message %></h2>
+  <% } %>
+
+  <div class="w-full max-w-md justify-center items-center mt-4 p-4">
+    <label class="block text-gray-700 text-md font-bold mb-2" for="_settings">
+      Settings Folder
+    </label>
+    <img src="\icons\folder-settings.svg" class="w-16 h-16 rounded-full border-solid border-2 border-black bg-purple-200" onclick="openFolder()" />
+    <label class="block text-gray-700 bg-purple-100 text-md font-bold mb-2">
+      <%= settingsdir %>
+    </label>
+  </div>
 
 </body>
 </html>
+
+<script type="text/javascript">
+
+openFolder = async function() {
+  const title = "Settings Folder Location";
+  const message = "Choose the folder location where settings files will be located.";
+  let robj = window.nodeStuff.getFolder(title, message);
+  console.log("HERE is robj", robj);
+  if (robj) {
+    settingsdir = robj;
+    window.nodeStuff.setSettingsDir(robj);
+  }
+}
+</script>

@@ -1,16 +1,19 @@
 {
-  "name": "robot-controller",
-  "version": "0.3.0",
-  "description": "Robot Controller using Johnny-Five",
+  "name": "Robot Dashboard",
+  "version": "0.5.0",
+  "author": "David Hogg",
+  "description": "Robot Coders Dashboard",
   "engines": {
     "node": "16.x"
   },
   "main": "main.js",
   "scripts": {
-    "start": "electron .",
+    "start": "electron-forge start",
     "build:tailwind": "npx tailwindcss -i public/styles/tailwind.css -o public/styles/style.css",
     "build:css": "postcss public/styles/tailwind.css -o public/styles/style.css",
-    "test": "node test.js"
+    "test": "node test.js",
+    "package": "electron-forge package",
+    "make": "electron-forge make"
   },
   "dependencies": {
     "autoprefixer": "^10.2.5",
@@ -20,19 +23,52 @@
     "deep-object-diff": "^1.1.0",
     "dotenv": "^10.0.0",
     "ejs": "^3.1.6",
+    "electron-squirrel-startup": "^1.0.0",
     "express": "^4.15.2",
     "fs-extra": "^10.0.0",
     "johnny-five": "^2.0.0",
     "js-yaml": "^4.1.0",
+    "node-localstorage": "^2.2.1",
     "postcss": "^8.2.10",
     "socket.io": "^4.4.0",
     "socket.io-client": "^4.4.0",
     "tailwindcss": "^3.0.2"
   },
   "devDependencies": {
+    "@electron-forge/cli": "^6.0.0-beta.63",
+    "@electron-forge/maker-deb": "^6.0.0-beta.63",
+    "@electron-forge/maker-rpm": "^6.0.0-beta.63",
+    "@electron-forge/maker-squirrel": "^6.0.0-beta.63",
+    "@electron-forge/maker-zip": "^6.0.0-beta.63",
     "electron": "^16.0.4",
     "electron-rebuild": "^3.2.5",
     "got": "^12.0.0",
     "tape": "^5.3.2"
+  },
+  "config": {
+    "forge": {
+      "packagerConfig": {},
+      "makers": [{
+          "name": "@electron-forge/maker-squirrel",
+          "config": {
+            "name": "robot_dashboard"
+          }
+        },
+        {
+          "name": "@electron-forge/maker-zip",
+          "platforms": [
+            "darwin"
+          ]
+        },
+        {
+          "name": "@electron-forge/maker-deb",
+          "config": {}
+        },
+        {
+          "name": "@electron-forge/maker-rpm",
+          "config": {}
+        }
+      ]
+    }
   }
 }

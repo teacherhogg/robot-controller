@@ -1,21 +1,36 @@
 const {
     app,
-    BrowserWindow
-} = require('electron')
+    BrowserWindow,
+    dialog,
+    ipcMain
+} = require('electron');
 
+const path = require('path');
 const server = require('./app');
 
 let mainWindow;
 
 function createWindow() {
 
+    //                preload: path.join(app.getAppPath(), 'preload.js')
+    //             preload: path.resolve(__dirname, 'preload.js')
+
+    const path1 = path.resolve(__dirname, 'preload.js');
+    //    const path2 = path.join(app.getAppPath(), 'preload.js');
+    console.log("path1:" + path1);
+    //    console.log("path2:" + path2);
+
     mainWindow = new BrowserWindow({
         width: 800,
         height: 600,
         webPreferences: {
-            nodeIntegration: true
+            nodeIntegration: true,
+            preload: path1
         }
     })
+
+    // Open the DevTools.
+    mainWindow.webContents.openDevTools()
 
     mainWindow.loadURL('http://localhost:5000')
     mainWindow.on('closed', function () {
@@ -23,8 +38,6 @@ function createWindow() {
         mainWindow = null
     })
 
-    // Open the DevTools.
-    mainWindow.webContents.openDevTools()
 
     //    console.log("HERE is server", server);
 }
@@ -45,5 +58,19 @@ app.on('window-all-closed', function () {
 app.on('activate', function () {
     if (mainWindow === null) {
         createWindow()
+    }
+})
+
+ipcMain.on('select-dir', (event, arg) => {
+
+    var dret = dialog.showOpenDialogSync({
+        properties: ['openDirectory'],
+        title: arg.title,
+        message: arg.message
+    })
+    if (!dret || dret.length < 1) {
+        event.returnValue = '';
+    } else {
+        event.returnValue = dret[0];
     }
 })
