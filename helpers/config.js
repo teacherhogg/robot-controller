@@ -268,7 +268,7 @@ const config = {
       _priv.groupdata[key].data[username]) {
       return _priv.groupdata[key].data[username];
     } else {
-      console.error("NO such userdata found! " + username + " " + group);
+//      console.error("Cannot get UserData for " + group + " " + username, _priv.groupdata);
       return {};
     }
   },
@@ -371,7 +371,7 @@ const config = {
     }
     return false;
   },
-  getGroupData: function (group, name) {
+  getGroupData: function (group, name, testmode) {
     const key = group + "-" + name;
     if (!_priv.groupdata) {
       _priv.groupdata = {};
@@ -386,9 +386,20 @@ const config = {
           name: name
         };
       }
-      //            console.log("getGroupData for " + name, _priv.groupdata[key]);
-    }
 
+      if (name == "participants") {
+        // Add a display property!
+        for (let userid in _priv.groupdata[key].data) {
+          let uobj = _priv.groupdata[key].data[userid];
+          if (testmode) {
+            uobj.display = uobj.firstname + " (" + uobj.username + ")";
+          } else {
+            uobj.display = uobj.firstname + " " + uobj.lastname;
+          }
+        }
+//        console.log("getGroupData for " + name, _priv.groupdata[key]);
+      }
+    }
     return _priv.groupdata[key];
   },
   getRobotSettings(bAll) {
@@ -420,7 +431,7 @@ const config = {
     let robots = this.getConfigData("robots");
 
     if (!robots[robotname] || !robots[robotname].leds) {
-      console.error("getMotorSettings failed. No such robot in robots.json " + robotname);
+      console.error("getLedSettings failed. No such robot in robots.yml " + robotname);
       return null;
     }
 
@@ -430,7 +441,7 @@ const config = {
     let robots = this.getConfigData("robots");
 
     if (!robots[robotname] || !robots[robotname].motors) {
-      console.error("getMotorSettings failed. No such robot in robots.json " + robotname);
+      console.error("getMotorSettings failed. No such robot in robots.yml " + robotname);
       return null;
     }
 

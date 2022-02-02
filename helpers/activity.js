@@ -36,9 +36,17 @@ const _helpers = {
             return false;
         }
 
-        //        console.log("_processCommand called with command", command);
+//        console.log("_processCommand called with command", command);
         const uinfo = _priv.dbaccess.getUserData2(command);
-        //        console.log("HERE is the uinfo  ", uinfo, command);
+//        console.log("HERE is the uinfo  ", uinfo, command);
+        // Check that this user is registered with a robot in this challenge!
+        if (!uinfo.userrobot) {
+            const msg = "User " + uinfo.username + " not registered to a robot. Re-register for challenge.";
+            console.error(msg);
+            _priv.ioLocal.emit('message', msg);
+            return false;
+        }
+
         // command.commands is a comma-separated list of commands!
         let ninstructions = 0;
         if (!command.commands) {
@@ -66,7 +74,6 @@ const _helpers = {
          */
         //        console.log("HERE is participants", users);
         if (!users[user.username]) {
-            console.error("Unknown User: " + user.username);
             return false;
         }
         return true;
@@ -120,17 +127,32 @@ const _helpers = {
         // STEP 1: Check if user exists (participants.csv)
         //         Update firstname and lastname properties...
         if (!_helpers._isUserKnown(user)) {
-            const msg = "Unkown user trying to register: " + user.username;
-            console.error(msg);
-            _priv.ioLocal.emit('message', msg);
-            return false;
+            if (challenge.testmode) {
+                // We are in testmode which will automatically register this user!
+                if (!dbaccess.dbParticipantAction("add", user)) {
+                    const msg = "Failed to automatically add (testmode) user: " + user.username;
+                    console.error(msg);
+                    _priv.ioLocal.emit('message', msg);
+                    return false;
+                } else {
+                    const msg = "Just auto added " + user.username + ". Refresh Teams tab to add to a team!";                    
+                    console.log(msg);
+                    _priv.ioLocal.emit('message', msg);
+                    return false;
+                }
+            } else {
+                const msg = "Unkown user trying to register: " + user.username;
+                console.error(msg);
+                _priv.ioLocal.emit('message', msg);
+                return false;
+            }
         }
 
-        // STEP 2: Is User on a team (robots.json)
-        // STEP 3: and is the robot active/enabled (robots.json)
+        // STEP 2: Is User on a team (teams.json)
+        // STEP 3: and is the robot active/enabled (robots.yml)
         const userinfo = _helpers._isUserOnTeamRobot(user);
         if (!userinfo) {
-            const msg = "User registering who is not on an active team " + user.username;
+            const msg = user.username + " trying to register but is not on an active team.";
             console.error(msg);
             _priv.ioLocal.emit('message', msg);
             return false;
@@ -228,16 +250,18 @@ const activity = {
     processUser: function (users) {
         // users is an array of objects with properties:
         //     id, challenge, username, usercode
-        //        console.log("PROCESSING USERS", users);
+        console.log("PROCESSING USERS", users);
 
         let challenge = _priv.dbaccess.getChallengeSettings();
         for (let user of users) {
             if (!challenge || challenge.phase !== 'Open') {
                 let userinfo = _priv.dbaccess.getUserData(user.username);
-                if (!userinfo) {
-                    userinfo = {};
+                let msg = "NOT OPEN for registration. User blocked: ";
+                if (!userinfo || !userinfo.username) {
+                  msg += user.firstname + " " + user.lastname + " (" + user.username + ")";
+                } else {
+                  msg += userinfo.firstname + " " + userinfo.lastname + " (" + userinfo.username + ")";
                 }
-                const msg = "NOT OPEN for registration. User blocked: " + userinfo.firstname + " " + userinfo.lastname + " (" + userinfo.username + ")";
                 console.log(msg);
                 _priv.ioLocal.emit('message', msg);
             } else {

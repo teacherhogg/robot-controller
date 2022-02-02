@@ -147,7 +147,10 @@ const _helpers = {
         }
     },
     _runMotors: function (robotid, cmd, inspeed, time) {
-        console.log("Running Motors on " + robotid + " " + cmd + " for " + time);
+        if (!robotid) {
+            console.error("ERROR running cmd " + cmd + " as robotid is undefined!");
+        }
+//        console.log("Running Motors on " + robotid + " " + cmd + " for " + time);
         _helpers._setupMotors(robotid);
         const motors = _priv.motors[robotid];
 
@@ -165,14 +168,14 @@ const _helpers = {
                     case 'FWD':
                         corr = 0;
                         speed = Math.max(Math.min(inspeed, 255 - corr), corr);
-                        console.log("MOVING forward with speed " + speed);
+//                        console.log("MOVING forward with speed " + speed);
                         motorL.forward(speed + corr);
                         motorR.forward(speed - corr);
                         break;
                     case 'BACK':
                         corr = 0;
                         speed = Math.max(Math.min(inspeed, 255 - corr), corr);
-                        console.log("MOVING backward with speed " + speed);
+//                        console.log("MOVING backward with speed " + speed);
                         motorL.reverse(speed + corr);
                         motorR.reverse(speed - corr);
                         break;
@@ -259,18 +262,18 @@ const _helpers = {
                         return;
                 }
 
-                console.log("RUNNING CMD " + cmd + " at speed " + speed + " for time " + time);
+  //              console.log("RUNNING CMD " + cmd + " at speed " + speed + " for time " + time);
                 const board = _priv.boards.byId(robotid);
                 if (!board) {
                     reject(new Error('board.byId ' + robotid + ' returning NULL!'));
                 } else {
                     board.wait(time, () => {
-                        console.log("TIMES UP!")
+     //                   console.log("TIMES UP!")
                         //                        motorL.reverse(255);
                         //                        motorR.reverse(255);
                         motorL.stop();
                         motorR.stop();
-                        console.log("STOPPED!");
+    //                    console.log("STOPPED!");
                         resolve('DONE');
                     });
                 }
@@ -412,9 +415,9 @@ const _helpers = {
                 const speed = parseInt(cmda[1], 10);
                 tlen = parseInt(cmda[2], 10);
                 //                console.log("STARTING motor command " + cmda[0], speed, tlen);
-                console.log("RUN " + cmda[0] + " for " + tlen);
+//                console.log("RUN " + cmda[0] + " for " + tlen);
                 await _helpers._runMotors(robotid, cmda[0], speed, tlen);
-                console.log("DONE runMotors!")
+//                console.log("DONE runMotors!")
                 break;
             case 'LEDON':
             case 'LEDONL':

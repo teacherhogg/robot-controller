@@ -72,9 +72,9 @@
                     <button type="submit" name="delete" value="<%= teamname %>-<%= member.username %>">X</button>
                     <input type="hidden" name="team" value="<%= teamname %>" />
                     <% if (member.registered) { %>
-                      <h3 id="<%= member.username %>" class="font-sans font-light text-center bg-green-300 px-2 pt-1 shadow-md rounded-lg"><%= member.firstname %> <%= member.lastname %></h3>
+                      <h3 id="<%= member.username %>" class="font-sans font-light text-center bg-green-300 px-2 pt-1 shadow-md rounded-lg"><%= member.display %></h3>
                     <% } else { %>
-                      <h3 id="<%= member.username %>" class="font-sans font-light text-center bg-grey-lightest px-2 pt-1 shadow-md rounded-lg"><%= member.firstname %> <%= member.lastname %></h3>
+                      <h3 id="<%= member.username %>" class="font-sans font-light text-center bg-grey-lightest px-2 pt-1 shadow-md rounded-lg"><%= member.display %></h3>
                     <% } %>
                     <div id="<%= member.username + '-command'%>" class="bg-blue-200"></div>
                   </div>
@@ -93,7 +93,7 @@
                 <select name="newmember" id="new" class="w-5/6" onchange="this.form.submit()">
                   <option disabled selected value>-- choose --</option>
                   <% for (let pt in participants) { %>
-                    <option value="<%= pt %>"><%= participants[pt].firstname %> <%= participants[pt].lastname %></option>
+                    <option value="<%= pt %>"><%= participants[pt].display %></option>
                   <% } %>
                 </select>
                 <button class="w-1/6" type="submit" name="add" value="<%= teamname %>">+</button>
@@ -104,28 +104,29 @@
     <% }); %>
   </div>
 
-    
-  <div class="flex items-center justify-center mb-4 space-x-2">
-     <span
-    class="text-xs px-3 font-medium text-base bg-green-500 text-white rounded-full py-1.5"
-  >
+  <div class="flex items-center justify-center my-2 space-x-2">
+  <span class="text-xs px-3 font-medium text-base bg-green-500 text-white rounded-full py-1.5">
     <%= settings.group %>
   </span>
 
   <span
-    class="text-xs px-3 font-medium text-base bg-blue-500 text-white rounded-full py-1.5"
-  >
+    class="text-xs px-3 font-medium text-base bg-blue-500 text-white rounded-full py-1.5">
     <%= settings.challengeName %>
   </span>
   
   <span
-    class="text-xs px-3 font-medium text-base bg-pink-600 text-white rounded-full py-1.5"
-  >
+    class="text-xs px-3 font-medium text-base bg-pink-600 text-white rounded-full py-1.5">
     <%= settings.challengeMode %>
   </span>
+
+  <% if (settings.testmode) { %>
+    <span class="text-xs px-3 font-medium text-base bg-red-600 text-white rounded-full py-1.5">testmode ON!</span>
+  <% } else { %>
+    <span class="text-xs px-3 font-medium text-base bg-red-600 text-white rounded-full py-1.5"></span>
+  <% } %>
   </div>
 
-  <form action="/teamaction" method="post" class="flex items-center justify-center mb-4 mx-2 px-2">
+  <form action="/teamaction" method="post" class="flex items-center justify-center my-2 mx-2 px-2">
     <% for (let phase of phases) { %>
       <% if (settings.phase == phase) { %>
       <button

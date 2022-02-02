@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://robotcoders.club" target="_blank">
-    <img src="https://robotcoders.club/robotcoders.svg" alt="https://robotcoders.club"><br/>
+    <img src="https://robotcoders.club/robotcoders.svg" alt="https://robotcoders.club" width="200"><br/>
   </a>
     Robot Coders is a flexible and inexpensive way to teach STEM and have groups of people drive robots regardless of location.
 </p>

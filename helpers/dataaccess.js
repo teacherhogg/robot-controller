@@ -8,7 +8,7 @@ const _priv = {
 const _helpers = {
   _getTeamsFromFile: function (group) {
     let tdata = _priv.config.getGroupData(group, "teams");
-    let participants = _priv.config.getGroupData(group, "participants");
+    let participants = _priv.config.getGroupData(group, "participants", _priv.challenge.testmode);
     /** 
      * Note that getGroupData returns object in form:
      *  {
@@ -228,7 +228,7 @@ const dbaccess = {
     if (!_priv.challenge) {
       this.getChallengeSettings();
     }
-    let participants = _priv.config.getGroupData(_priv.challenge.group, "participants");
+    let participants = _priv.config.getGroupData(_priv.challenge.group, "participants", _priv.challenge.testmode);
 
     return participants.data;
   },
@@ -299,7 +299,7 @@ const dbaccess = {
     if (!_priv.challenge) {
       this.getChallengeSettings();
     }
-    console.log("dbParticipantAction " + action, params);
+//    console.log("dbParticipantAction " + action, params);
 
     return _priv.config.modifyGroupData(_priv.challenge.group, "participants", action, null, params);
   }
