@@ -74,7 +74,7 @@ const dbaccess = {
       this.getChallengeSettings();
     }
 
-    return _priv.config.getUserData(_priv.challenge.group, username);
+    return _priv.config.getUserData(_priv.challenge.group, username, _priv.challenge.testmode);
   },
   /**
    * 
@@ -91,6 +91,13 @@ const dbaccess = {
     }
     const a = command.id.split("-");
     return _priv.config.getUserData(_priv.challenge.group, a[0]);
+  },
+  updateOneRobotStatus: function(robotid, robotstatus) {
+    for (let robot of _priv.robots) {
+      if (robot.id == robotid) {
+        robot.status = robotstatus;
+      }
+    }
   },
   updateRobotStatus: function (rarray) {
     for (let arobot of rarray) {

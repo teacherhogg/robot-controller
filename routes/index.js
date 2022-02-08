@@ -60,17 +60,27 @@ var activateRobots = function (req, res) {
         console.log("Activating Robots", activerobots);
 
         // Initialize the boards
-        arduino.initRobots(config, dbaccess, function (success, emsg) {
-            if (!success) {
-                console.error(emsg);
+        arduino.initRobots(config, dbaccess, function (ret) {
+            console.log("HERE is initRobots eh!!!", ret);
+            let msg = 'Robots Successfully Initialized:';
+            let emsg = null;
+            for (let r in ret) {
+                if (ret[r]) {
+                    msg = ' ' + r;
+                } else {
+                    if (!emsg) { emsg = 'Robots Failed to Initialize: '; }
+                    emsg = ' ' + r;
+                }
+            }
+            console.log(msg);
+            console.log(emsg);
+            if (emsg) {
                 robots(req, res, {
                     message: emsg
                 });
             } else {
-                console.log("FINISHED initRobots!!!");
                 teams(req, res);
             }
-
         });
     }
 }

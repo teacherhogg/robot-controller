@@ -31,18 +31,40 @@ const _helpers = {
         // commands is an object with properties:
         //     id, challenge, commands
 
-        if (challenge.challengeName != command.challenge) {
-            console.error("challenge incorrect: " + command.challenge + " (" + command.id + ")");
+        if (challenge.phase !== 'Running') {
+            const msg = "Challenge " + command.challenge + " not currently Running! Command Rejected.";
+            console.error(msg);
+            _priv.ioLocal.emit('message', msg);
             return false;
         }
+
+        if (challenge.challengeName != command.challenge) {
+            const msg = "challenge incorrect: " + command.challenge + " (" + command.id + ")";
+            console.error(msg);
+            _priv.ioLocal.emit('message', msg);
+            return false;
+        }
+
 
 //        console.log("_processCommand called with command", command);
         const uinfo = _priv.dbaccess.getUserData2(command);
 //        console.log("HERE is the uinfo  ", uinfo, command);
         // Check that this user is registered with a robot in this challenge!
         if (!uinfo.userrobot) {
-            const msg = "User " + uinfo.username + " not registered to a robot. Re-register for challenge.";
+
+            const userinfo = _helpers._isUserOnTeamRobot(uinfo, true);
+            console.error("HERE da robot stuff", userinfo);
+
+            let msg = "";
+            if (!userinfo) {
+                msg = "User " + uinfo.username + " not registered to a any robot.";
+            } else if (userinfo && !userinfo.active) {
+                msg = "User " + uinfo.username + " registered to robot " + userinfo.robot  + " but robot not active.";
+            } else {
+                msg = "User " + uinfo.username + "  registered to robot " + userinfo.robot + " but needs to Re-register for current challenge.";
+            }
             console.error(msg);
+            console.error(uinfo);
             _priv.ioLocal.emit('message', msg);
             return false;
         }
@@ -78,14 +100,15 @@ const _helpers = {
         }
         return true;
     },
-    _isUserOnTeamRobot: function (user) {
+    _isUserOnTeamRobot: function (user, allrobots) {
         const teams = _priv.dbaccess.getTeams();
-        //        console.log("HERE is the teams", teams);
+        console.log("HERE is the teams", teams);
 
         const robots = _priv.dbaccess.getRobots();
-        //        const robots = _priv.config.getConfigData("robots");
+        // const robots = _priv.config.getConfigData("robots");
         let userrobot = null;
         let userteam = null;
+        let active = false;
         for (let teamname in teams) {
             const team = teams[teamname];
             for (let member of team.members) {
@@ -94,9 +117,10 @@ const _helpers = {
 
                     for (let robot of robots) {
                         if (robot.id == team.robot) {
-                            if (robot.active) {
+                            if (robot.active || allrobots) {
                                 userrobot = team.robot;
                                 userteam = teamname;
+                                active = robot.active;
                             }
                         }
                     }
@@ -104,9 +128,9 @@ const _helpers = {
             }
         }
         if (!userrobot) {
-            console.error("USER is NOT a part of an active team: " + user.username);
-            //            console.error("robots", robots);
-            //            console.error("TEAMS", teams);
+            console.error("USER is NOT a part of an active team: " + user.username, user);
+            console.error("robots", robots);
+            console.error("TEAMS", JSON.stringify(teams, null, 3));
             return null;
         }
         let uinfo = _priv.dbaccess.getUserData(user.username);
@@ -116,6 +140,7 @@ const _helpers = {
         }
         console.log("USER REGISTERED:" + user.username + " (" + uinfo.firstname + " " + uinfo.lastname + ") robot:" + userrobot + " team:" + userteam);
         return {
+            active: active,
             team: userteam,
             robot: userrobot
         }
@@ -219,10 +244,10 @@ const activity = {
     processCommand: function (commands) {
         // commands is an array of objects with properties:
         //          id, timestamp, commands, challenge
-        //        console.log("PROCESSING COMMAND", commands);
+        //console.log("PROCESSING COMMAND", commands);
 
         let challenge = _priv.dbaccess.getChallengeSettings();
-
+        console.log("processCommand for challenge " + challenge.phase, challenge);
 
         //        console.log("PROCESS COMMAND command is ", commands);
         // commands is an array of objects with props: id, challenge, timestamp, commands

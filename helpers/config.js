@@ -201,6 +201,19 @@ const _helpers = {
       _priv.localstorage = new LocalStorage('./scratch');
     }
     return _priv.localstorage;
+  },
+  _addDisplayProperty: function(key, testmode) {
+    // Add a display property!
+    for (let userid in _priv.groupdata[key].data) {
+      let uobj = _priv.groupdata[key].data[userid];
+      if (!uobj.hasOwnProperty('display')) {
+        if (testmode) {
+          uobj.display = uobj.firstname + " (" + uobj.username + ")";
+        } else {
+          uobj.display = uobj.firstname + " " + uobj.lastname;
+        }
+      }
+    }
   }
 }
 
@@ -252,7 +265,7 @@ const config = {
 
     return true;
   },
-  getUserData: function (group, username) {
+  getUserData: function (group, username, testmode) {
     const name = 'participants';
     const key = group + "-" + name;
     if (!_priv.groupdata || !_priv.groupdata[key]) {
@@ -266,7 +279,17 @@ const config = {
     if (_priv.groupdata && _priv.groupdata[key] &&
       _priv.groupdata[key].data &&
       _priv.groupdata[key].data[username]) {
-      return _priv.groupdata[key].data[username];
+
+      uobj = _priv.groupdata[key].data[username];
+      if (!uobj.hasOwnProperty('display')) {
+        if (testmode) {
+          uobj.display = uobj.firstname + " (" + uobj.username + ")";
+        } else {
+          uobj.display = uobj.firstname + " " + uobj.lastname;
+        }
+      }
+
+      return uobj;
     } else {
 //      console.error("Cannot get UserData for " + group + " " + username, _priv.groupdata);
       return {};
@@ -388,17 +411,11 @@ const config = {
       }
 
       if (name == "participants") {
-        // Add a display property!
-        for (let userid in _priv.groupdata[key].data) {
-          let uobj = _priv.groupdata[key].data[userid];
-          if (testmode) {
-            uobj.display = uobj.firstname + " (" + uobj.username + ")";
-          } else {
-            uobj.display = uobj.firstname + " " + uobj.lastname;
-          }
-        }
-//        console.log("getGroupData for " + name, _priv.groupdata[key]);
+        _helpers._addDisplayProperty(key, testmode);
       }
+    } else if (testmode && name == 'participants') {
+        // Add a display property!
+        _helpers._addDisplayProperty(key, testmode);
     }
     return _priv.groupdata[key];
   },

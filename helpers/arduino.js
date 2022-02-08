@@ -9,6 +9,7 @@ const {
 
 var _priv = {
     boards: null,
+    boardstatus: {},
     config: null,
     dbaccess: null,
     leds: null,
@@ -27,7 +28,7 @@ const _helpers = {
         }
         return rfound;
     },
-    _initRobots: function (cb) {
+    _initRobotsDEPRECATED: function (cb) {
         let rsettings = _priv.dbaccess.getRobots(true);
         let names = [];
         for (let r of rsettings) {
@@ -71,7 +72,7 @@ const _helpers = {
                         if (err && err.message) {
                             let rfound = _helpers._findRobotFromError(rsettings, err.message);
                             if (rfound) {
-                                emsg = "ERROR connecting to " + rfound.name + " on port " + rfound.port;
+                                emsg = "ERROR connecting to " + rfound.name + " on port " + rfound.port + " (" + err.message + ")";
                             }
                         }
                         cb(false, emsg);
@@ -86,28 +87,104 @@ const _helpers = {
             }
         }
     },
-    _setupLeds: function (robotname) {
+    /**
+     * 
+     * @param {*} cb Callback function
+     * @param {*} rsetting Has properties name and status
+     */
+    _initOneRobot: function (r) {
+        let rsetting = {
+            name: r.name,
+            id: r.id,
+            port: r.port,
+            repl: false,
+            debug: true,
+            timeout: 10000
+        }
+        // NOTE: Set repl to false to prevent board closing immediately!
+        let board = null;
+        return new Promise((resolve, reject) => {
+            try {
+                board = new five.Board(rsetting);
+
+                board
+                    .on("ready", function (info) {
+
+                        console.log(rsetting.name + " board now ready");
+                        
+                        r.status = true;
+                        _priv.dbaccess.updateOneRobotStatus(r.id, true);
+
+                        resolve({board: board, id: r.id, success: true});
+                    })
+                    .on("exit", function(val) {
+                        console.log("EXIT called for " + rsetting.name, val);
+                    })
+                    .on("error", function (err) {
+                        let emsg = "ERROR connecting to robot.";
+                        if (err && err.message) {
+                            emsg = "ERROR connecting to " + rsetting.name + " on port " + rsetting.port + " (" + err.message + ")";
+                        }
+                        console.error(emsg, err);
+                        reject(new Error(emsg));
+                    });
+            } catch (err) {
+                const emsg = "ERROR initializing robot " + robotname;
+                console.error(emsg, err);
+                reject(new Error(emsg));
+            }
+        }).then(null, (bob) => {
+            console.error("NO CLUE WAZZUP!", bob);
+            return null;
+        });
+    },
+    _initRobots: async function () {
+        _priv.lastuser = {};
+        let rsettings = _priv.dbaccess.getRobots(true);
+
+        if (!_priv.boards) {
+            _priv.boards = {};
+        }
+        for (let r of rsettings) {
+            console.log("INIT board: " + r.name);
+            if (!_priv.boardstatus[r.name]) {
+                let robj = await _helpers._initOneRobot(r);
+                if (robj && typeof robj === 'object' && robj.success) {
+                    _priv.boards[r.id] = robj.board;
+                    console.log("BOARD " + r.name + " INITED!")
+                    _priv.boardstatus[r.name] = true;
+                } else {
+                    console.error("BOARD " + r.name + " FAILED to init!");
+                    _priv.boardstatus[r.name] = false;
+                }
+            }
+        }
+
+        console.log("_initRobots returns ", _priv.boardstatus);
+        return _priv.boardstatus;
+    },
+    _setupLeds: function (robotid) {
         if (!_priv.leds) {
             _priv.leds = {};
         }
-        if (!_priv.leds[robotname]) {
-            const linfo = _priv.config.getLedSettings(robotname);
+        if (!_priv.leds[robotid]) {
+            const linfo = _priv.config.getLedSettings(robotid);
 
             let lightL = new five.Led({
-                board: _priv.boards.byId(robotname),
+                board: _priv.boards[robotid],
                 pin: linfo.left
             });
             let lightR = new five.Led({
-                board: _priv.boards.byId(robotname),
+                board: _priv.boards[robotid],
                 pin: linfo.right
             });
 
             if (!lightL || !lightR) {
-                console.error("ERROR getting LED setup!!! " + robotname);
+                console.error("ERROR getting LED setup!!! " + robotid);
                 return;
             }
 
-            _priv.leds[robotname] = {
+            _priv.leds[robotid] = {
                 left: lightL,
                 right: lightR
             }
@@ -122,7 +199,7 @@ const _helpers = {
             const minfo = _priv.config.getMotorSettings(robotid);
 
             console.log("HERE are the motor settings for robot " + robotid, minfo);
-            const board = _priv.boards.byId(robotid);
+            const board = _priv.boards[robotid];
             let lsettings = minfo.left;
             lsettings.board = board;
             let rsettings = minfo.right;
@@ -135,11 +212,6 @@ const _helpers = {
                 console.error("ERROR getting motor setup!!! " + robotid);
                 return;
             }
-            /*
-                        _priv.boards[robotname].repl.inject({
-                            motorL, motorR
-                        });
-            */
             _priv.motors[robotid] = {
                 left: motorL,
                 right: motorR
@@ -263,7 +335,7 @@ const _helpers = {
                 }
 
   //              console.log("RUNNING CMD " + cmd + " at speed " + speed + " for time " + time);
-                const board = _priv.boards.byId(robotid);
+                const board = _priv.boards[robotid];
                 if (!board) {
                     reject(new Error('board.byId ' + robotid + ' returning NULL!'));
                 } else {
@@ -451,18 +523,20 @@ const _helpers = {
 }
 
 const arduino = {
-    initRobots: function (config, dbaccess, cb) {
+    initRobots: async function (config, dbaccess, cb) {
         _priv.config = config;
         _priv.dbaccess = dbaccess;
-        _helpers._initRobots(cb);
+        const retval = await _helpers._initRobots();
+        console.log("initRobots returning ", retval);
+        cb(retval);
     },
     testing: function (query, robotname) {
         _helpers._testing(query, robotname);
     },
     driveRobotLocal: async function (robotid, commands, dir) {
         console.log('driveRobotLocal ' + robotid + ' -> ' + dir);
-        if (!_priv.boards) {
-            let error = 'Robots not initialized!';
+        if (!_priv.boards || !_priv.boards[robotid]) {
+            let error = 'Robot ' + robotid + ' not initialized!';
             console.error(error);
             return error;
         }
@@ -506,6 +580,7 @@ const arduino = {
         }
 
         const challenge = _priv.dbaccess.getChallengeSettings();
+//        console.log("execute commands on challenge", challenge);
 
         if (challenge.challengeMode == "team") {
             if (_priv.lastuser[user.userrobot] == user.username) {
