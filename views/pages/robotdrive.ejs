@@ -65,7 +65,7 @@ changeRobot = function(val) {
 }
 
 moveRobot = function(dir) {
-  console.log("WE GOTS a movement in dir " + dir);
+//  console.log("WE GOTS a movement in dir " + dir);
   if (!scurrrobot) {
     alert("Must choose a robot first.");
     return;
@@ -81,7 +81,7 @@ postMoveRequest = function(dir) {
   const xhr = new XMLHttpRequest();
   const params = 'robotmove='+dir+'&robotid='+scurrrobot;
   const url = host + '/robotmove';
-  console.log("/robotmove with params", params);
+//  console.log("/robotmove with params", params);
   xhr.open('POST', url, true);
 
   //Send the proper header information along with the request

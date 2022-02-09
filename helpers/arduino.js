@@ -138,24 +138,34 @@ const _helpers = {
             return null;
         });
     },
-    _initRobots: async function () {
+    _initRobots: async function (activerobots) {
         _priv.lastuser = {};
-        let rsettings = _priv.dbaccess.getRobots(true);
+        let rsettings = _priv.dbaccess.getRobots();
+//        console.log("activerobots", activerobots);
+//        console.log("rsettings", rsettings);
 
         if (!_priv.boards) {
             _priv.boards = {};
         }
+        // Delete any robots not currently selected
         for (let r of rsettings) {
-            console.log("INIT board: " + r.name);
-            if (!_priv.boardstatus[r.name]) {
-                let robj = await _helpers._initOneRobot(r);
-                if (robj && typeof robj === 'object' && robj.success) {
-                    _priv.boards[r.id] = robj.board;
-                    console.log("BOARD " + r.name + " INITED!")
-                    _priv.boardstatus[r.name] = true;
-                } else {
-                    console.error("BOARD " + r.name + " FAILED to init!");
-                    _priv.boardstatus[r.name] = false;
+            if (r.active) {
+                if (!_priv.boardstatus[r.name]) {
+                    console.log("INIT board: " + r.name);
+                    let robj = await _helpers._initOneRobot(r);
+                    if (robj && typeof robj === 'object' && robj.success) {
+                        _priv.boards[r.id] = robj.board;
+                        console.log("BOARD " + r.name + " INITED!")
+                        _priv.boardstatus[r.name] = true;
+                    } else {
+                        console.error("BOARD " + r.name + " FAILED to init!");
+                        _priv.boardstatus[r.name] = false;
+                    }
+                }
+            } else {
+                // Robot NOT active
+                if (_priv.boards[r.name]) {
+                    delete _priv.boards[r.name];
                 }
             }
         }
@@ -523,18 +533,18 @@ const _helpers = {
 }
 
 const arduino = {
-    initRobots: async function (config, dbaccess, cb) {
+    initRobots: async function (config, dbaccess, activerobots, cb) {
         _priv.config = config;
         _priv.dbaccess = dbaccess;
-        const retval = await _helpers._initRobots();
-        console.log("initRobots returning ", retval);
+        const retval = await _helpers._initRobots(activerobots);
+//        console.log("initRobots returning ", retval);
         cb(retval);
     },
     testing: function (query, robotname) {
         _helpers._testing(query, robotname);
     },
     driveRobotLocal: async function (robotid, commands, dir) {
-        console.log('driveRobotLocal ' + robotid + ' -> ' + dir);
+//        console.log('driveRobotLocal ' + robotid + ' -> ' + dir);
         if (!_priv.boards || !_priv.boards[robotid]) {
             let error = 'Robot ' + robotid + ' not initialized!';
             console.error(error);
@@ -560,7 +570,7 @@ const arduino = {
                 default:
                     cmd = 'FWD-255-1000';
             }
-            console.log("driveRobotLocal " + robotid + " with cmd " + cmd);
+  //          console.log("driveRobotLocal " + robotid + " with cmd " + cmd);
             await _helpers._executeCommand(robotid, cmd);
             return '';
         }
