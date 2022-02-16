@@ -141,7 +141,7 @@ const _helpers = {
     _initRobots: async function (activerobots) {
         _priv.lastuser = {};
         let rsettings = _priv.dbaccess.getRobots();
-//        console.log("activerobots", activerobots);
+        console.log("activerobots", activerobots);
 //        console.log("rsettings", rsettings);
 
         if (!_priv.boards) {
@@ -149,7 +149,10 @@ const _helpers = {
         }
         // Delete any robots not currently selected
         for (let r of rsettings) {
-            if (r.active) {
+            let bYes = activerobots.includes(r.id)
+//            console.log("Is " + r.id + " an active robot: " + bYes);
+            if (bYes) {
+//            if (r.active) {
                 if (!_priv.boardstatus[r.name]) {
                     console.log("INIT board: " + r.name);
                     let robj = await _helpers._initOneRobot(r);
@@ -164,8 +167,11 @@ const _helpers = {
                 }
             } else {
                 // Robot NOT active
-                if (_priv.boards[r.name]) {
+                if (_priv.boards.hasOwnProperty(r.name)) {
                     delete _priv.boards[r.name];
+                }
+                if (_priv.boardstatus.hasOwnProperty(r.name)) {
+                    delete _priv.boardstatus[r.name];
                 }
             }
         }
@@ -462,22 +468,16 @@ const _helpers = {
         }
         return bRet;
     },
-    _executeCommand: async function (robotid, cmd, cb) {
+    _executeCommand: async function (robotid, cmd) {
         if (!cmd) {
             console.error("ERROR - cmd not set");
-            if (cb) {
-                cb("ERROR");
-            }
-            return;
+            return false;
         }
         cmd.trim();
         let cmda = cmd.split("-");
         if (cmda.length != 3) {
             console.error("ERROR - cmd malformed " + cmd);
-            if (cb) {
-                cb("ERROR");
-            }
-            return;
+            return false;
         }
         let tlen;
 
@@ -525,9 +525,6 @@ const _helpers = {
                 break;
         }
 
-        if (cb) {
-            cb(null, robotid);
-        }
         return bRet;
     }
 }
@@ -581,22 +578,24 @@ const arduino = {
         // commands is a comma-separated list of commands.
         if (!_priv.boards) {
             console.log("BOARDS not initialized!");
-            return;
+            return false;
         }
         //        console.log("executeCommands", commands, user);
 
         if (!commands) {
-            return;
+            return false;
         }
 
         const challenge = _priv.dbaccess.getChallengeSettings();
 //        console.log("execute commands on challenge", challenge);
 
         if (challenge.challengeMode == "team") {
+            console.log("LAST USER " + _priv.lastuser[user.userrobot]);
             if (_priv.lastuser[user.userrobot] == user.username) {
                 console.log("BLOCKED " + user.firstname + " on " + user.userrobot);
-                return;
+                return false;
             } else {
+                console.log("USER CLEARED " + user.username);
                 _priv.lastuser[user.userrobot] = user.username;
             }
         }
@@ -605,30 +604,33 @@ const arduino = {
         let uinfo = _priv.dbaccess.getUserData(user.username);
         let msg = uinfo.firstname + " " + uinfo.lastname + " (" + user.userrobot + ":" + user.userteam + ") " + commands;
         console.log(msg);
+        let bRet = false;
 
         for (let cmd of cmda) {
             // ignore blank entries.
             if (cmd) {
                 if (challenge.challengeMode == "sync" || challenge.challengeMode == "team") {
-                    await _helpers._executeCommand(user.userrobot, cmd);
+                    bRet = await _helpers._executeCommand(user.userrobot, cmd);
                 } else {
                     if (_priv.blocks[user.userrobot]) {
                         console.log("BLOCKED - command currently running on " + user.userrobot);
+                        return false;
                     } else {
                         // Only ONE command set per robot at a time.
                         _priv.blocks[user.userrobot] = true;
-                        _helpers._executeCommand(user.userrobot, cmd, function (err, rname) {
-                            _priv.blocks[user.userrobot] = false;
-                            if (err) {
-                                console.error("ERROR returned from _executeCommand");
-                            } else {
-                                console.log("COMPLETE for " + user.userrobot);
-                            }
-                        });
+                        bRet = await _helpers._executeCommand(user.userrobot, cmd);
+                        _priv.blocks[user.userrobot] = false;
+                        if (!bRet) {
+                            console.error("ERROR returned from _executeCommand");
+                        } else {
+                            console.log("Command COMPLETE for " + user.userrobot);
+                        }
                     }
                 }
             }
         }
+
+        return bRet;
     }
 }
 

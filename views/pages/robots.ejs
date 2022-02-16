@@ -58,9 +58,16 @@
       <label class="block text-gray-700 text-md font-bold mb-2" for="challengename">
         Robots
       </label>
+      <div class="grid grid-cols-2 gap-2">
       <% robots.forEach(function(r) { %>
-      <input type="checkbox" name=<%= r.id %> class="form-checkbox h-5 w-5 text-gray-600" <%= r.active ? 'checked' : '' %> ><span class="ml-1 mr-5 text-purple-700"><%= r.name %></span>
+        <div class="bg-purple-100">
+          <input type="checkbox" name=<%=r.id %> class="form-checkbox h-5 w-5 text-gray-600" <%= r.active ? 'checked' : '' %>>
+          <span class="ml-1 mr-5 text-purple-700">
+              <%= r.name %>
+          </span>
+        </div>
       <% }); %>
+      </div>
     </div>
 
     <div class="md:flex md:items-center">

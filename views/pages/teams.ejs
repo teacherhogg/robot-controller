@@ -11,6 +11,7 @@
 
   <div class="flex flex-row flex-wrap items-center justify-center space-x-2">
     <% Object.keys(teams).forEach(function(teamname) { %>
+      <% teamid = teamname.split(" ").join("-"); %>
       <!-- 1 card -->
       <div class="flex relative bg-white py-6 px-6 rounded-3xl my-4 shadow-xl">
           <% if (teams[teamname].robot) { 
@@ -60,7 +61,7 @@
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
-                      <p>info pane</p> 
+                    <p>info pane</p> 
                 </div>
               </form>
               <div class="border-t-2 border-green-500"></div>
@@ -98,6 +99,20 @@
                 </select>
                 <button class="w-1/6" type="submit" name="add" value="<%= teamname %>">+</button>
               </form>
+
+              <div class="bg-blue-300 py-1 pl-3 rounded-full">
+                <div class="flex space-x-2">
+                  <div id="<%= teamid  + '-total-ncommands'%>" class="bg-purple-500 text-white text-xl px-2 rounded-full">
+                    <%= team.total_commands %>
+                  </div>
+                  <div id="<%= teamid  + '-total-ninstructions'%>" class="bg-indigo-800 text-white text-xl px-2 rounded-full">
+                    <%= team.total_instructions %>
+                  </div>
+                  <div id="<%= teamid  + '-total-nblocked'%>" class="bg-red-800 text-white text-xl px-2 rounded-full">
+                    <%= team.total_blocked %>
+                  </div>
+                </div>
+              </div>
 
           </div>
       </div>

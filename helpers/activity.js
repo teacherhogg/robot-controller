@@ -27,12 +27,16 @@ const _helpers = {
 
         return lastcmd + " (" + totalt + " s) [" + validc + " i]";
     },
-    _processCommand: function (challenge, command) {
+    _processCommand: async function (challenge, command) {
         // commands is an object with properties:
         //     id, challenge, commands
 
         if (challenge.phase !== 'Running') {
-            const msg = "Challenge " + command.challenge + " not currently Running! Command Rejected.";
+            const uinfo2 = _priv.dbaccess.getUserData2(command);
+            let msg = "Challenge " + command.challenge + " not currently Running! Command Rejected.";
+            if (uinfo2 && uinfo2.username) {
+                msg = uinfo2.username + " command rejected as Challenge not currently running!";
+            }
             console.error(msg);
             _priv.ioLocal.emit('message', msg);
             return false;
@@ -57,7 +61,7 @@ const _helpers = {
 
             let msg = "";
             if (!userinfo) {
-                msg = "User " + uinfo.username + " not registered to a any robot.";
+                msg = "User " + uinfo.username + " not registered with any team.";
             } else if (userinfo && !userinfo.active) {
                 msg = "User " + uinfo.username + " registered to robot " + userinfo.robot  + " but robot not active.";
             } else {
@@ -83,10 +87,21 @@ const _helpers = {
 
         let cinfo = Object.assign({}, uinfo);
         cinfo.command = _helpers._getCommandSummary(command.commands, ninstructions);
-
         _priv.ioLocal.emit('commandInfo', cinfo);
 
-        _priv.arduino.executeCommands(uinfo, command.commands);
+        console.log("RUN COMMANDS for " + uinfo.username);
+        let bRet= await _priv.arduino.executeCommands(uinfo, command.commands);
+        if (!bRet) {
+            console.error("FAILED TO RUN COMMAND!!! for " + uinfo.username);
+            uinfo.nblocked++;
+            cinfo.nblocked++;
+            _priv.ioLocal.emit('commandInfo', cinfo);
+        }
+
+        const tstats = dbaccess.updateTeamStats(uinfo, 1, ninstructions, bRet ? 0 : 1);
+        if (tstats) {
+            _priv.ioLocal.emit('teamStats', tstats);
+        }
     },
     _isUserKnown: function (user) {
         const users = _priv.dbaccess.getParticipants();
@@ -102,7 +117,7 @@ const _helpers = {
     },
     _isUserOnTeamRobot: function (user, allrobots) {
         const teams = _priv.dbaccess.getTeams();
-        console.log("HERE is the teams", teams);
+//        console.log("HERE is the teams", teams);
 
         const robots = _priv.dbaccess.getRobots();
         // const robots = _priv.config.getConfigData("robots");
@@ -247,7 +262,7 @@ const activity = {
         //console.log("PROCESSING COMMAND", commands);
 
         let challenge = _priv.dbaccess.getChallengeSettings();
-        console.log("processCommand for challenge " + challenge.phase, challenge);
+//        console.log("processCommand for challenge " + challenge.phase, challenge);
 
         //        console.log("PROCESS COMMAND command is ", commands);
         // commands is an array of objects with props: id, challenge, timestamp, commands
@@ -275,7 +290,7 @@ const activity = {
     processUser: function (users) {
         // users is an array of objects with properties:
         //     id, challenge, username, usercode
-        console.log("PROCESSING USERS", users);
+//        console.log("PROCESSING USERS", users);
 
         let challenge = _priv.dbaccess.getChallengeSettings();
         for (let user of users) {

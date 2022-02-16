@@ -45,7 +45,7 @@ server.listen(portLocal, () => {
 let activerobots = [];
 
 var activateRobots = function (req, res) {
-    //  console.log("ACTIVATE: HERE is req object", req.body);
+//    console.log("ACTIVATE: HERE is req object", req.body);
 
     /** req.body will be object with props the Robot ID and value
      * "on". If it is empty, that means NO robots are on.
@@ -73,8 +73,8 @@ var activateRobots = function (req, res) {
                 }
             }
             console.log("Successes:" + msg);
-            console.log("Errors: " + emsg);
             if (emsg) {
+                console.log("Errors: " + emsg);
                 robots(req, res, {
                     message: emsg
                 });

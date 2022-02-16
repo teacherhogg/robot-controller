@@ -23,8 +23,12 @@ const _helpers = {
       teams[team] = {
         members: [],
         robot: tdata.data[team].robot,
-        teamid: team
+        teamid: team,
+        total_blocked: 0,
+        total_instructions: 0,
+        total_commands: 0
       }
+      
       //            console.log("HERE da team " + team, tdata);
       if (tdata.data[team].members) {
         for (let member of tdata.data[team].members) {
@@ -48,6 +52,25 @@ const _helpers = {
 
     //        console.log("HERE is the resulting teams", teams);
     return teams;
+  },
+  _resetMemberStats: function() {
+//    console.log("RESET MEMBER STATS", _priv.teams, _priv.challenge);
+
+    if (!_priv.teams || !_priv.challenge || !_priv.teams[_priv.challenge.group]) {
+      return;
+    }
+    let teams = _priv.teams[_priv.challenge.group][_priv.challenge.challengeName];
+    if (!teams) {
+      return;
+    }
+    for (let team in teams) {
+      teams[team].total_commands = 0;
+      teams[team].total_blocked = 0;
+      teams[team].total_instructions = 0;
+      for (let member of teams[team].members) {
+        member.ncommands = member.nblocked = member.ninstructions = 0;
+      }
+    }
   }
 }
 
@@ -66,6 +89,11 @@ const dbaccess = {
   changePhase: function (phase) {
     if (!_priv.challenge) {
       this.getChallengeSettings();
+    }
+    console.log("Here is changePhase for " + phase);
+    if (phase == "Running") {
+      // need to reset the stats for members to zero!
+      _helpers._resetMemberStats();
     }
     _priv.challenge.phase = phase;
   },
@@ -156,10 +184,12 @@ const dbaccess = {
     }
 
     this.getChallengeSettings();
+//    console.log("HERE ROBOT CAHLLENG", _priv.challenge, params);
+
     if (params._challengename) {
       _priv.challenge.challengeName = params._challengename;
     }
-    if (params._challengename) {
+    if (params._challengemode) {
       _priv.challenge.challengeMode = params._challengemode;
     }
     if (params._group) {
@@ -309,6 +339,35 @@ const dbaccess = {
 //    console.log("dbParticipantAction " + action, params);
 
     return _priv.config.modifyGroupData(_priv.challenge.group, "participants", action, null, params);
+  },
+  updateTeamStats: function(uinfo, nCommands, nInstructions, nBlocked) {
+//    console.log("updateTeam ", uinfo, _priv.teams, _priv.challenge);
+
+    if (!_priv.teams || !_priv.challenge) {
+      return null;
+    }
+    let teams = _priv.teams[_priv.challenge.group][_priv.challenge.challengeName];
+    if (!teams) {
+      return null;
+    }
+
+    let team = teams[uinfo.userteam];
+    if (!team) {
+      return null;
+    }
+
+    // uinfo.userteam
+    team.total_commands += nCommands;
+    team.total_instructions += nInstructions;
+    team.total_blocked += nBlocked;
+
+    const tstats = {
+      total_commands: team.total_commands,
+      total_instructions: team.total_instructions,
+      total_blocked: team.total_blocked,
+      teamid: uinfo.userteam.split(" ").join("-")
+    }
+    return tstats;
   }
 }
 

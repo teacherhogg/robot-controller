@@ -43,11 +43,18 @@ socket.on('disconnect', function () {
 });
 
 socket.on('commandInfo', function (data) {
-    console.log("HERE is commandInfo from server", data);
+//    console.log("HERE is commandInfo from server", data);
     changeElementText(data.username + '-command', 'bg-blue-200', data.command);
     changeElementText2(data.username + '-ncommands', data.ncommands);
     changeElementText2(data.username + '-ninstructions', data.ninstructions);
     changeElementText2(data.username + '-nblocked', data.nblocked);
+});
+
+socket.on('teamStats', function (data) {
+//    console.log("HERE is teamStats from server", data);
+    changeElementText2(data.teamid + '-total-ncommands', data.total_commands);
+    changeElementText2(data.teamid + '-total-ninstructions', data.total_instructions);
+    changeElementText2(data.teamid + '-total-nblocked', data.total_blocked);
 });
 
 socket.on('userInfo', function (data) {
